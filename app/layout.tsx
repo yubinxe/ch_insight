@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import './crm.css'
 
 export const metadata: Metadata = {
-  title: '청약 인사이트 — 청약 현황 대시보드',
-  description: '청약홈 공공데이터 기반 분양정보·경쟁률·당첨자 통계 대시보드',
+  title: '집플리즈 — 주거기회 탐지 · 지원관리 CRM',
+  description:
+    '조건을 한 번 저장하면 청약·임대 기회를 자동 탐지하고, 우선순위·알림·지원 일정까지 관리하는 Housing Opportunity CRM',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

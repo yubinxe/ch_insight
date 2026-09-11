@@ -1,0 +1,198 @@
+'use client'
+
+import type { ReactNode } from 'react'
+import { SCORE_WEIGHTS } from '@/lib/crm/services/scoring'
+import type { MatchScoreBreakdown } from '@/lib/crm/types'
+
+export function PageHead({
+  title,
+  sub,
+  right,
+}: {
+  title: string
+  sub?: string
+  right?: ReactNode
+}) {
+  return (
+    <div className="crm-page-head">
+      <div>
+        <h1 className="crm-page-title">{title}</h1>
+        {sub && <p className="crm-page-sub">{sub}</p>}
+      </div>
+      {right && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>{right}</div>}
+    </div>
+  )
+}
+
+export function Stat({
+  label,
+  value,
+  unit,
+  hint,
+  hot,
+  live,
+}: {
+  label: string
+  value: number | string
+  unit?: string
+  hint?: string
+  hot?: boolean
+  live?: boolean
+}) {
+  return (
+    <div className={`crm-stat${hot ? ' crm-stat--hot' : ''}${live ? ' crm-stat--live' : ''}`}>
+      <div className="crm-stat__label">{label}</div>
+      <div className="crm-stat__value">
+        {typeof value === 'number' ? value.toLocaleString() : value}
+        {unit && <span className="crm-stat__unit">{unit}</span>}
+      </div>
+      {hint && <div className="crm-stat__hint">{hint}</div>}
+    </div>
+  )
+}
+
+export function scoreTier(score: number) {
+  if (score >= 85) return 'high'
+  if (score >= 70) return 'mid'
+  return 'low'
+}
+
+export function ScoreBadge({ score }: { score: number }) {
+  return (
+    <span className="score-badge" data-tier={scoreTier(score)} title="Opportunity Score (지원 우선순위 점수)">
+      {score}
+    </span>
+  )
+}
+
+const BAR_ROWS: { key: keyof MatchScoreBreakdown; label: string; weight: number }[] = [
+  { key: 'regionScore', label: '지역 적합도', weight: SCORE_WEIGHTS.region },
+  { key: 'affordabilityScore', label: '가격 적합도', weight: SCORE_WEIGHTS.affordability },
+  { key: 'areaScore', label: '면적 적합도', weight: SCORE_WEIGHTS.area },
+  { key: 'housingTypeScore', label: '유형 적합도', weight: SCORE_WEIGHTS.housingType },
+  { key: 'competitionScore', label: '경쟁강도', weight: SCORE_WEIGHTS.competition },
+  { key: 'urgencyScore', label: '마감 긴급도', weight: SCORE_WEIGHTS.urgency },
+]
+
+export function ScoreBars({ breakdown }: { breakdown: MatchScoreBreakdown }) {
+  return (
+    <div className="score-bars">
+      {BAR_ROWS.map(row => (
+        <div key={row.key} className="score-bar__row">
+          <span className="score-bar__label">
+            {row.label} <span style={{ opacity: 0.6 }}>{row.weight}%</span>
+          </span>
+          <span className="score-bar__track">
+            <span className="score-bar__fill" style={{ width: `${breakdown[row.key]}%` }} />
+          </span>
+          <span className="score-bar__val">{breakdown[row.key]}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function Chip({
+  children,
+  tone = 'default',
+}: {
+  children: ReactNode
+  tone?: 'default' | 'accent' | 'pos' | 'warn' | 'hot'
+}) {
+  return <span className={`crm-chip${tone === 'default' ? '' : ` crm-chip--${tone}`}`}>{children}</span>
+}
+
+export function DemoFlag({ label = 'Demo 합성 데이터' }: { label?: string }) {
+  return <span className="demo-flag">◇ {label}</span>
+}
+
+export function Drawer({
+  open,
+  onClose,
+  title,
+  subtitle,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  subtitle?: string
+  children: ReactNode
+}) {
+  if (!open) return null
+  return (
+    <div className="crm-drawer-root" role="dialog" aria-modal="true" aria-label={title}>
+      <button className="crm-drawer-backdrop" onClick={onClose} aria-label="닫기" />
+      <div className="crm-drawer-panel">
+        <div className="crm-drawer-head">
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--ink)' }}>
+              {title}
+            </div>
+            {subtitle && (
+              <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 5 }}>{subtitle}</div>
+            )}
+          </div>
+          <button className="crm-drawer-close" onClick={onClose} aria-label="닫기">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <div className="crm-drawer-body">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+export function KeyValues({ items }: { items: { k: string; v: ReactNode }[] }) {
+  return (
+    <div className="crm-kv">
+      {items.map(item => (
+        <div key={item.k} className="crm-kv__cell">
+          <div className="crm-kv__k">{item.k}</div>
+          <div className="crm-kv__v">{item.v}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function Section({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
+  return (
+    <section>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div className="crm-sec-title">{title}</div>
+        {right}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+export function TableSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="crm-skel" style={{ height: 44, opacity: 1 - i * 0.1 }} />
+      ))}
+    </div>
+  )
+}
+
+export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  return (
+    <div className="crm-error" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <span>{message}</span>
+      {onRetry && (
+        <button type="button" className="crm-btn crm-btn--sm" onClick={onRetry}>
+          다시 시도
+        </button>
+      )}
+    </div>
+  )
+}
+
+export function Empty({ children }: { children: ReactNode }) {
+  return <div className="crm-empty">{children}</div>
+}
