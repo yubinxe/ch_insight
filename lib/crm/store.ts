@@ -106,7 +106,7 @@ function createState(): CrmState {
     id: uid('L'),
     at: now.toISOString(),
     kind: 'SYSTEM',
-    message: `데이터 로드 완료 — 고객 ${state.customers.length}명 · 주택 ${state.properties.length}건 (합성 데모 데이터)`,
+    message: `데이터 적재 완료 · 고객 ${state.customers.length}명 · 물건 ${state.properties.length}건 (시연용 합성 데이터)`,
   })
   return state
 }
@@ -176,14 +176,14 @@ export function createApplication(
   const roundNo = state.applications.filter(a => a.customerId === customerId).length
   log(
     'APPLICATION',
-    `${customer.name}(${customerId}) 지원 절차 생성 — ${property.name} · 통산 ${roundNo}회차`,
+    `${customer.name}(${customerId}) 지원 등록 · ${property.name} — 통산 ${roundNo}회차`,
     application.id,
   )
   const dated = tasks.filter(t => t.dueDate).length
   const pending = tasks.length - dated
   log(
     'TASK',
-    `할 일 ${dated}건 자동 생성${pending ? ` · 날짜 미정 ${pending}건 보류` : ''}`,
+    `일정 ${dated}건 편성${pending ? ` · 날짜 미정 ${pending}건 보류` : ''}`,
     application.id,
   )
 
@@ -247,7 +247,7 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
   state.events.unshift(event)
   log(
     'EVENT',
-    `빈 집 발생 ${target.id} — ${target.name} · 공실 ${previousVacancy} → ${target.vacancyCount}건`,
+    `공실 발생 ${target.id} · ${target.name} — 공실 ${previousVacancy} → ${target.vacancyCount}건`,
     event.id,
   )
 
@@ -258,7 +258,7 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
     now,
   })
   state.matches = [...matches, ...state.matches].slice(0, 400)
-  log('MATCH', `조건 맞는 고객 ${matches.length}명 추출 (지원 우선순위 70점 이상)`, event.id)
+  log('MATCH', `적격 고객 ${matches.length}명 추출 · 지원 우선순위 70점 이상`, event.id)
 
   const top = matches[0]
   const topCustomer = top ? (customerById(top.customerId) ?? null) : null
@@ -266,7 +266,7 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
   if (top && topCustomer) {
     log(
       'SCORE',
-      `${topCustomer.name}(${topCustomer.id}) 지원 우선순위 ${top.opportunityScore}점 — 1순위 알림 대상`,
+      `${topCustomer.name}(${topCustomer.id}) 지원 우선순위 ${top.opportunityScore}점 · 1순위 통보 대상`,
       top.id,
     )
   }
@@ -292,8 +292,8 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
     log(
       'NOTIFICATION',
       result.status === 'SENT'
-        ? `${topCustomer.name} 카카오톡 알림 발송 완료`
-        : `${topCustomer.name} 맞춤 알림 생성 (${activeNotificationAdapter().label})`,
+        ? `${topCustomer.name} 카카오 통보 발송 완료`
+        : `${topCustomer.name} 통보 ${activeNotificationAdapter().label}`,
       notification.id,
     )
   }

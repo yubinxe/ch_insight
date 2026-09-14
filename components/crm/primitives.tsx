@@ -139,7 +139,7 @@ export function Chip({
   )
 }
 
-export function DemoFlag({ label = '데모 합성 데이터' }: { label?: string }) {
+export function DemoFlag({ label = '시연용 합성 데이터' }: { label?: string }) {
   return <span className="demo-flag">◇ {label}</span>
 }
 

@@ -52,7 +52,7 @@ export default function CustomersView() {
   if (error) {
     return (
       <>
-        <PageHead title="고객 CRM" />
+        <PageHead title="고객관리" />
         <ErrorBox message={error} onRetry={reload} />
       </>
     )
@@ -61,12 +61,12 @@ export default function CustomersView() {
   return (
     <>
       <PageHead
-        title="고객 CRM"
-        sub="연락처를 모아두는 곳이 아닙니다. 조건·자격·관심주택·지원이력·일정이 함께 쌓여서, 쓸수록 다음 지원이 쉬워집니다."
+        title="고객관리"
+        sub="연락처 관리가 아닙니다. 조건·자격·관심물건·지원이력·일정이 고객 단위로 누적되어 재상담 원가를 낮춥니다."
         right={
           data ? (
             <Chip tone="accent">
-              재지원 고객 {data.kpi.repeatApplicants}명 · 반복지원률 {data.kpi.repeatRate}%
+              재지원 {data.kpi.repeatApplicants}명 · 재지원률 {data.kpi.repeatRate}%
             </Chip>
           ) : undefined
         }
@@ -75,12 +75,12 @@ export default function CustomersView() {
       <Card>
         <CardHead
           title={`등록 고객 ${data?.customers.length ?? 0}명`}
-          sub="지원을 많이 한 순서"
+          sub="지원 횟수 내림차순"
           right={
             <input
               className="an-input"
               style={{ width: 240, height: 38 }}
-              placeholder="이름 · ID · 지역 검색"
+              placeholder="성명 · 고객번호 · 지역"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
@@ -90,7 +90,7 @@ export default function CustomersView() {
         {loading ? (
           <TableSkeleton rows={8} />
         ) : rows.length === 0 ? (
-          <Empty title="검색 결과가 없습니다">다른 이름이나 지역으로 찾아보세요.</Empty>
+          <Empty title="검색 결과 없음">다른 성명 또는 지역으로 조회하십시오.</Empty>
         ) : (
           <div className="crm-table-wrap">
             <table className="crm-table">
@@ -99,11 +99,11 @@ export default function CustomersView() {
                   <th>고객</th>
                   <th>가구</th>
                   <th>희망지역</th>
-                  <th>관심유형</th>
+                  <th>대상유형</th>
                   <th className="num">예산(보증금/월)</th>
-                  <th className="num">최소면적</th>
+                  <th className="num">최소전용</th>
                   <th className="num">지원이력</th>
-                  <th className="num">최고 우선순위</th>
+                  <th className="num">최고점</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,11 +137,11 @@ export default function CustomersView() {
       >
         {focus && (
           <>
-            <Section title="저장된 주거 조건">
+            <Section title="등록 조건">
               <KeyValues
                 items={[
                   { k: '희망지역', v: focus.preferredRegions.join(', ') },
-                  { k: '관심유형', v: focus.preferredHousingTypes.join(', ') },
+                  { k: '대상유형', v: focus.preferredHousingTypes.join(', ') },
                   { k: '최대 보증금', v: `${won(focus.maxDeposit)}원` },
                   { k: '최대 월세', v: `${focus.maxMonthlyRent}만원` },
                   { k: '최소 전용면적', v: `${focus.minArea}㎡` },
@@ -152,7 +152,7 @@ export default function CustomersView() {
 
             <Section title={`지원 이력 ${focusApps.length}회`}>
               {focusApps.length === 0 ? (
-                <Empty title="아직 지원 이력이 없습니다" icon="calendar" />
+                <Empty title="지원 이력 없음" icon="calendar" />
               ) : (
                 <div className="crm-table-wrap" style={{ margin: 0, padding: 0 }}>
                   <table className="crm-table">
@@ -176,17 +176,17 @@ export default function CustomersView() {
               )}
               {focusApps.length >= 2 && (
                 <div className="crm-note" style={{ marginTop: 12 }}>
-                  반복 지원 고객입니다. 저장된 조건과 서류 이력이 그대로 재사용되어 다음 지원 준비 시간이 줄어듭니다.
+                  재지원 고객입니다. 등록 조건과 구비서류 이력이 승계되어 차기 지원 준비 시간이 단축됩니다.
                 </div>
               )}
             </Section>
 
-            <Section title="현재 추천 기회">
+            <Section title="현재 매칭 건">
               {focusMatches.length === 0 ? (
-                <Empty title="지금 매칭된 기회가 없습니다" icon="spark">
-                  대시보드에서 공실 이벤트를 발생시키면
+                <Empty title="매칭 건 없음" icon="spark">
+                  종합현황에서 공실 이벤트 발생 시
                   <br />
-                  이 고객의 조건과 자동으로 대조합니다.
+                  본 고객 조건과 자동 대조됩니다.
                 </Empty>
               ) : (
                 <div className="crm-table-wrap" style={{ margin: 0, padding: 0 }}>

@@ -52,7 +52,7 @@ export default function PropertiesView() {
   if (error) {
     return (
       <>
-        <PageHead title="주택" />
+        <PageHead title="물건관리" />
         <ErrorBox message={error} onRetry={reload} />
       </>
     )
@@ -61,9 +61,9 @@ export default function PropertiesView() {
   return (
     <>
       <PageHead
-        title="관리 주택"
-        sub="공고 일정과 빈 집 상태를 계속 감시합니다. 원하는 주택에서 직접 공실 이벤트를 일으켜 볼 수도 있습니다."
-        right={<DemoFlag label="공실 데이터는 데모 합성" />}
+        title="물건관리"
+        sub="모집공고 일정과 공실 현황을 상시 감시합니다. 개별 물건에서 공실 이벤트를 직접 발생시킬 수 있습니다."
+        right={<DemoFlag label="공실 데이터 : 시연용 합성" />}
       />
 
       {actionError && (
@@ -74,8 +74,8 @@ export default function PropertiesView() {
 
       <Card>
         <CardHead
-          title={`주택 ${rows.length}건`}
-          sub="실제 공개 API는 개별 호실의 실시간 공실 정보를 주지 않습니다. 아래 공실 수치는 데모용 합성 데이터입니다."
+          title={`물건 ${rows.length}건`}
+          sub="공개 API는 개별 호실의 실시간 공실 정보를 제공하지 않습니다. 하단 공실 수치는 시연용 합성 데이터입니다."
           right={
             <div className="crm-filter-row" style={{ margin: 0 }}>
               {FILTERS.map(f => (
@@ -97,14 +97,14 @@ export default function PropertiesView() {
         {loading ? (
           <TableSkeleton rows={8} />
         ) : rows.length === 0 ? (
-          <Empty title="조건에 해당하는 주택이 없습니다">위 필터를 바꿔보세요.</Empty>
+          <Empty title="해당 물건 없음">상단 필터 조건을 변경하십시오.</Empty>
         ) : (
           <div className="crm-table-wrap">
             <table className="crm-table">
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>주택명</th>
+                  <th>물건명</th>
                   <th>유형</th>
                   <th>지역</th>
                   <th className="num">전용</th>

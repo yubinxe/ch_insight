@@ -4,20 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, type ReactNode } from 'react'
 
-/** 사용자가 직접 쓰는 화면 */
-const USER_LINKS = [
-  { href: '/', label: '홈' },
-  { href: '/analyze', label: '내 기회 분석' },
-]
-
-/** 운영자(관리자)가 쓰는 화면 — 시각적으로 한 단계 낮춘다 */
-const OPS_LINKS = [
-  { href: '/dashboard', label: '대시보드' },
-  { href: '/matches', label: '추천' },
-  { href: '/customers', label: '고객' },
-  { href: '/properties', label: '주택' },
-  { href: '/applications', label: '지원' },
-  { href: '/insights', label: '청약 통계' },
+/**
+ * 업무 순서대로 배열한다 — 조건 진단 → 매칭 → 고객 → 물건 → 지원 → 시장.
+ * 내부 조직도(사용자/운영)가 아니라 실무 동선이 기준이다.
+ */
+const NAV = [
+  { href: '/dashboard', label: '종합현황' },
+  { href: '/analyze', label: '조건진단' },
+  { href: '/matches', label: '매칭현황' },
+  { href: '/customers', label: '고객관리' },
+  { href: '/properties', label: '물건관리' },
+  { href: '/applications', label: '지원관리' },
+  { href: '/insights', label: '시장통계' },
 ]
 
 export function ThemeToggle() {
@@ -61,12 +59,12 @@ export default function CrmShell({ children }: { children: ReactNode }) {
           <Link href="/" className="crm-nav__brand">
             <span className="crm-nav__mark">
               <svg
-                width="15"
-                height="15"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
@@ -78,21 +76,7 @@ export default function CrmShell({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="crm-nav__links">
-            {USER_LINKS.map(l => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="crm-nav__link"
-                data-active={isActive(l.href) ? 'true' : 'false'}
-              >
-                {l.label}
-              </Link>
-            ))}
-
-            <span className="crm-nav__divider" aria-hidden="true" />
-            <span className="crm-nav__group-label">운영</span>
-
-            {OPS_LINKS.map(l => (
+            {NAV.map(l => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -106,19 +90,8 @@ export default function CrmShell({ children }: { children: ReactNode }) {
 
           <div className="crm-nav__right">
             <Link href="/analyze" className="crm-nav__cta">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 3l2.2 6.2L20 11l-5.8 1.8L12 19l-2.2-6.2L4 11l5.8-1.8z" />
-              </svg>
-              <span>무료 분석</span>
+              <span className="crm-nav__cta-full">조건진단 실행</span>
+              <span className="crm-nav__cta-short">진단</span>
             </Link>
             <ThemeToggle />
           </div>
@@ -129,9 +102,9 @@ export default function CrmShell({ children }: { children: ReactNode }) {
 
       <footer className="crm-foot">
         <p>
-          AI 참고 분석 서비스입니다 · 지원 전 반드시 공식 공고문을 확인하세요
+          본 서비스의 분석 결과는 참고용이며 공식 청약자격 판정이 아닙니다. 지원 전 공식 모집공고문을 확인하시기 바랍니다.
           <br />
-          공고 통계 출처: 공공데이터포털 청약홈 OpenAPI · 한국부동산원 · 데모 공실 데이터는 합성(Synthetic)입니다
+          공고·통계 출처 : 공공데이터포털 청약홈 OpenAPI · 한국부동산원 | 공실 이벤트 및 임대물건 레코드는 시연용 합성 데이터입니다.
         </p>
       </footer>
     </div>

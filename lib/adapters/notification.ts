@@ -54,29 +54,28 @@ export function buildNotificationPayload(
   const dday = d === null ? '' : d < 0 ? ' (마감됨)' : d === 0 ? ' (오늘 마감!)' : ` · D-${d}`
 
   const body = [
-    `🏠 ${customer.name}님, 조건에 맞는 집이 나왔어요`,
+    `[집인사이트] ${customer.name}님 맞춤 주거기회 안내`,
     '',
-    property.name,
-    `서울 ${property.region} · ${property.housingType} · 전용 ${property.area}㎡`,
+    '등록하신 조건에 부합하는 물건이 확인되어 안내드립니다.',
     '',
-    `보증금 ${formatMoney(property.deposit)}`,
-    `월 임대료 ${property.monthlyRent}만원`,
+    `■ ${property.name}`,
+    `   ${property.region} · ${property.housingType} · 전용 ${property.area}㎡`,
+    `   보증금 ${formatMoney(property.deposit)} / 월 임대료 ${property.monthlyRent}만원`,
     '',
-    `지원 우선순위 ${match.opportunityScore}점 / 100점`,
+    `■ 지원 우선순위 ${match.opportunityScore}점 (100점 만점)`,
+    `   ${match.reason}`,
     '',
-    '이 집을 추천하는 이유',
-    match.reason,
+    `■ 접수 마감 ${formatDeadline(property.applicationEnd)}${dday}`,
     '',
-    `📅 접수 마감 ${formatDeadline(property.applicationEnd)}${dday}`,
-    '',
-    '※ AI 참고 분석이에요. 지원 전 공식 공고문을 꼭 확인해 주세요.',
+    '※ 본 안내는 참고용이며 공식 청약자격 판정이 아닙니다.',
+    '※ 지원 전 반드시 공식 모집공고문을 확인하시기 바랍니다.',
   ].join('\n')
 
   return {
     customerId: customer.id,
     propertyId: property.id,
     matchId: match.id,
-    title: `조건에 맞는 집 알림 · ${property.name}`,
+    title: `맞춤 주거기회 안내 · ${property.name}`,
     body,
   }
 }
@@ -129,7 +128,7 @@ export const kakaoMemoAdapter: NotificationAdapter = {
 /** 발송 권한이 없는 환경의 폴백 — payload 를 그대로 보존해 Dashboard 에 미리보기로 노출 */
 export const previewAdapter: NotificationAdapter = {
   id: 'preview',
-  label: '미리보기 (아직 발송 안 함)',
+  label: '원문 생성 · 미발송',
   isAvailable() {
     return true
   },
@@ -137,7 +136,7 @@ export const previewAdapter: NotificationAdapter = {
     return {
       status: 'PREVIEW',
       adapter: 'preview',
-      detail: '카카오 연동이 아직 없어 실제로 보내지는 않고, 보낼 내용만 저장했습니다.',
+      detail: '카카오 채널 연동 전으로 실제 발송은 수행하지 않고 통보 원문만 보관합니다.',
     }
   },
 }

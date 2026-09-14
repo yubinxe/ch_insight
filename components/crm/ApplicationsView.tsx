@@ -64,7 +64,7 @@ export default function ApplicationsView() {
       await updateStage(focus.id, stage)
       await reload()
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : '단계 변경 실패')
+      setActionError(err instanceof Error ? err.message : '단계 변경에 실패했습니다.')
     } finally {
       setBusy(false)
     }
@@ -73,7 +73,7 @@ export default function ApplicationsView() {
   if (error) {
     return (
       <>
-        <PageHead title="지원 관리" />
+        <PageHead title="지원관리" />
         <ErrorBox message={error} onRetry={reload} />
       </>
     )
@@ -82,8 +82,8 @@ export default function ApplicationsView() {
   return (
     <>
       <PageHead
-        title="지원 관리"
-        sub="추천이 지원으로 이어지면 접수·서류·발표 일정이 자동으로 만들어집니다. 떨어진 건도 조건이 남아 다음 기회로 연결됩니다."
+        title="지원관리"
+        sub="매칭이 지원으로 전환되면 접수·서류·발표·계약 일정이 자동 편성됩니다. 미당첨 건도 조건이 유지되어 차기 공고로 연결됩니다."
         right={
           data ? (
             <Chip tone="accent">
@@ -100,12 +100,12 @@ export default function ApplicationsView() {
       )}
 
       <Card>
-        <CardHead title="지원 진행 현황" sub="카드를 누르면 일정과 단계 변경을 볼 수 있습니다." />
+        <CardHead title="단계별 진행 현황" sub="항목 선택 시 일정 및 단계 변경 가능" />
         {loading ? (
           <TableSkeleton rows={5} />
         ) : (data?.applications.length ?? 0) === 0 ? (
-          <Empty title="아직 지원 건이 없습니다" icon="calendar">
-            추천 랭킹에서 <strong>지원 시작</strong>을 누르면 여기에 나타납니다.
+          <Empty title="지원 건 없음" icon="calendar">
+            매칭현황에서 <strong>지원 등록</strong> 실행 시 반영됩니다.
           </Empty>
         ) : (
           <div className="kanban">
@@ -170,9 +170,9 @@ export default function ApplicationsView() {
               />
             )}
 
-            <Section title="자동으로 만들어진 일정">
+            <Section title="편성 일정">
               {focusTasks.length === 0 ? (
-                <Empty title="생성된 일정이 없습니다" icon="calendar" />
+                <Empty title="편성 일정 없음" icon="calendar" />
               ) : (
                 <div className="gantt">
                   {focusTasks.map((t, i) => {
@@ -190,7 +190,7 @@ export default function ApplicationsView() {
                         <span>
                           <span className="gantt__label">{t.title}</span>
                           <span className="gantt__sub">
-                            {next ? '다음 할 일' : done ? '완료' : t.dueDate ? '예정' : '공고에 날짜 미공개'}
+                            {next ? '차기 처리' : done ? '완료' : t.dueDate ? '예정' : '공고 미공개'}
                           </span>
                         </span>
                         <span className="gantt__date">{t.dueDate ?? '날짜 미정'}</span>
@@ -201,13 +201,13 @@ export default function ApplicationsView() {
               )}
               {focusTasks.some(t => t.dueDate === null) && (
                 <div className="crm-note" style={{ marginTop: 12 }}>
-                  공고에 해당 날짜가 아직 공개되지 않아 일부 일정은 <strong>날짜 미정</strong>입니다.
-                  임의로 날짜를 만들지 않고, 공고가 갱신되면 자동으로 채워집니다.
+                  모집공고에 해당 일자가 미공개되어 일부 항목은 <strong>날짜 미정</strong>으로 처리됩니다.
+                  임의 일자를 생성하지 않으며 공고 갱신 시 자동 반영됩니다.
                 </div>
               )}
             </Section>
 
-            <Section title="단계 바꾸기">
+            <Section title="단계 변경">
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {APPLICATION_STAGES.map(s => (
                   <button
@@ -224,7 +224,7 @@ export default function ApplicationsView() {
               </div>
               {focus.stage === 'LOST' && (
                 <div className="crm-note" style={{ marginTop: 12 }}>
-                  탈락해도 조건은 유지됩니다. 다음 공고·공실 이벤트에서 이 고객이 다시 매칭 대상에 포함됩니다.
+                  미당첨 시에도 등록 조건은 유지됩니다. 차기 공고·공실 이벤트에서 재차 대조 대상에 포함됩니다.
                 </div>
               )}
             </Section>
@@ -251,11 +251,11 @@ export default function ApplicationsView() {
 
       <div style={{ marginTop: 'var(--gap)' }}>
         <Card>
-          <CardHead title="곧 마감되는 할 일" sub="진행 중인 지원 건에서 다가오는 일정" />
+          <CardHead title="마감 임박 일정" sub="진행 중 지원 건의 예정 항목" />
           {loading ? (
             <TableSkeleton rows={5} />
           ) : (data?.upcomingTasks.length ?? 0) === 0 ? (
-            <Empty title="다가오는 일정이 없습니다" icon="calendar" />
+            <Empty title="예정 일정 없음" icon="calendar" />
           ) : (
             <div className="crm-table-wrap">
               <table className="crm-table">
@@ -263,9 +263,9 @@ export default function ApplicationsView() {
                   <tr>
                     <th>고객</th>
                     <th>주택</th>
-                    <th>할 일</th>
+                    <th>처리 항목</th>
                     <th>마감일</th>
-                    <th className="num">남은 기간</th>
+                    <th className="num">잔여</th>
                   </tr>
                 </thead>
                 <tbody>
