@@ -11,6 +11,7 @@ const STATUS_LABEL: Record<PropertyStatus, string> = {
   OPEN: '접수중',
   UPCOMING: '접수 예정',
   CLOSED: '마감',
+  CANCELLED: '모집 취소',
 }
 
 const FILTERS: { id: 'ALL' | PropertyStatus | 'VACANT'; label: string }[] = [

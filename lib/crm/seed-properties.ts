@@ -83,12 +83,21 @@ export function generateProperties(count = 50, seed = 990911, now = new Date()):
     const start = shift(today, startOffset)
     const end = shift(start, duration)
 
-    // 실제 공고에도 결과 발표일이 미정인 경우가 있다 — 임의 생성하지 않는다.
-    const hasResultDate = hero ? true : rng.bool(0.72)
-    const resultDate = hasResultDate ? iso(shift(end, rng.int(14, 40))) : null
-
     const applicationStart = iso(start)
     const applicationEnd = iso(end)
+
+    // 실제 공고에도 일부 일자가 미공개인 경우가 많다 — 없으면 null 로 둔다.
+    const resultDate = hero || rng.bool(0.72) ? iso(shift(end, rng.int(14, 40))) : null
+
+    // 서류 마감은 접수 마감과 다른 날짜다. 미공개 공고가 더 흔하다.
+    const documentDeadline = rng.bool(0.35) ? iso(shift(end, rng.int(2, 7))) : null
+
+    // 계약일은 당첨자 발표 이후에 공고되며 대부분 공고 시점에는 미정이다.
+    const contractStart =
+      resultDate && rng.bool(0.3)
+        ? iso(shift(new Date(`${resultDate}T00:00:00`), rng.int(10, 25)))
+        : null
+
     const status = statusOf(today, applicationStart, applicationEnd)
 
     const supplyCount = hero ? 12 : rng.int(4, 90)
@@ -116,7 +125,11 @@ export function generateProperties(count = 50, seed = 990911, now = new Date()):
       vacancyCount,
       applicationStart,
       applicationEnd,
+      documentDeadline,
       resultDate,
+      contractStart,
+      // 합성 데이터에는 진짜 원문이 없다. 링크를 만들어 원문인 척하지 않는다.
+      sourceUrl: null,
       status,
       competitionRate,
       dataOrigin: 'SYNTHETIC',

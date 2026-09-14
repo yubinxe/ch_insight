@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { aggregateReferenceStats, DEFAULT_REFERENCE } from '@/lib/subscription-score'
+import { aggregateReferenceStats } from '@/lib/subscription-score'
 import type { ScoreStatItem } from '@/lib/types'
 
 const BASE = 'https://api.odcloud.kr/api'
@@ -42,11 +42,12 @@ export async function GET(req: NextRequest) {
     const json = await res.json()
     const data = (json.data as ScoreStatItem[]) ?? []
 
+    // 집계할 통계가 없으면 임의 기본값을 만들어 채우지 않는다.
     if (data.length === 0) {
       return Response.json({
-        ...DEFAULT_REFERENCE,
+        stats: null,
         regionName: region ? (REGION_NAMES[region] ?? '해당 지역') : '전국',
-        fallback: true,
+        reason: 'NO_DATA' as const,
       })
     }
 
@@ -60,15 +61,15 @@ export async function GET(req: NextRequest) {
 
     const stats = aggregateReferenceStats(filtered, regionName)
     if (!stats) {
-      return Response.json({ ...DEFAULT_REFERENCE, regionName, fallback: true })
+      return Response.json({ stats: null, regionName, reason: 'INSUFFICIENT' as const })
     }
 
-    return Response.json({ ...stats, fallback: false })
+    return Response.json({ stats, regionName, reason: null })
   } catch {
     return Response.json({
-      ...DEFAULT_REFERENCE,
+      stats: null,
       regionName: region ? (REGION_NAMES[region] ?? '해당 지역') : '전국',
-      fallback: true,
+      reason: 'FETCH_FAILED' as const,
     })
   }
 }

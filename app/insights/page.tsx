@@ -26,7 +26,7 @@ const TABS: { id: TabId; label: string; icon: 'home' | 'chart' | 'users' | 'spar
   { id: 'comp', label: '경쟁률 현황', icon: 'chart' },
   { id: 'map', label: '핫플레이스', icon: 'pin' },
   { id: 'win', label: '당첨자 통계', icon: 'users' },
-  { id: 'predict', label: 'AI 당첨 예측', icon: 'spark' },
+  { id: 'predict', label: '가점 비교', icon: 'spark' },
 ]
 
 const EMPTY_KPI: DashboardKpi = {

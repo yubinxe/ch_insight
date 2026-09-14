@@ -31,7 +31,7 @@ export default function CustomersView() {
     const bestScore = new Map<string, number>()
     for (const m of data.matches) {
       const cur = bestScore.get(m.customerId) ?? 0
-      if (m.opportunityScore > cur) bestScore.set(m.customerId, m.opportunityScore)
+      if (m.preferenceScore > cur) bestScore.set(m.customerId, m.preferenceScore)
     }
     const q = query.trim()
     return data.customers
@@ -202,7 +202,7 @@ export default function CustomersView() {
                                 {p ? `${p.region} · ${p.area}㎡ · 접수 ~${shortDate(p.applicationEnd)}` : ''}
                               </div>
                             </td>
-                            <td className="num"><ScoreBadge score={m.opportunityScore} /></td>
+                            <td className="num"><ScoreBadge score={m.preferenceScore} /></td>
                           </tr>
                         )
                       })}

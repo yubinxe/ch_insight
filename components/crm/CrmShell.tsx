@@ -9,12 +9,11 @@ import { useState, type ReactNode } from 'react'
  * 내부 조직도(사용자/운영)가 아니라 실무 동선이 기준이다.
  */
 const NAV = [
-  { href: '/dashboard', label: '종합현황' },
-  { href: '/analyze', label: '조건진단' },
-  { href: '/matches', label: '매칭현황' },
-  { href: '/customers', label: '고객관리' },
-  { href: '/properties', label: '물건관리' },
-  { href: '/applications', label: '지원관리' },
+  { href: '/admin/dashboard', label: '종합현황' },
+  { href: '/admin/matches', label: '매칭현황' },
+  { href: '/admin/customers', label: '고객관리' },
+  { href: '/admin/properties', label: '물건관리' },
+  { href: '/admin/applications', label: '지원관리' },
   { href: '/insights', label: '시장통계' },
 ]
 
@@ -56,7 +55,7 @@ export default function CrmShell({ children }: { children: ReactNode }) {
     <div className="crm-shell">
       <nav className="crm-nav">
         <div className="crm-nav__inner">
-          <Link href="/" className="crm-nav__brand">
+          <Link href="/admin/dashboard" className="crm-nav__brand">
             <span className="crm-nav__mark">
               <svg
                 width="14"
@@ -72,7 +71,7 @@ export default function CrmShell({ children }: { children: ReactNode }) {
                 <path d="M5 10v9.5h14V10" />
               </svg>
             </span>
-            집인사이트
+            청약인사이트 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>운영</span>
           </Link>
 
           <div className="crm-nav__links">
@@ -89,9 +88,8 @@ export default function CrmShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="crm-nav__right">
-            <Link href="/analyze" className="crm-nav__cta">
-              <span className="crm-nav__cta-full">조건진단 실행</span>
-              <span className="crm-nav__cta-short">진단</span>
+            <Link href="/" className="crm-nav__link">
+              소비자 화면
             </Link>
             <ThemeToggle />
           </div>
@@ -102,9 +100,7 @@ export default function CrmShell({ children }: { children: ReactNode }) {
 
       <footer className="crm-foot">
         <p>
-          본 서비스의 분석 결과는 참고용이며 공식 청약자격 판정이 아닙니다. 지원 전 공식 모집공고문을 확인하시기 바랍니다.
-          <br />
-          공고·통계 출처 : 공공데이터포털 청약홈 OpenAPI · 한국부동산원 | 공실 이벤트 및 임대물건 레코드는 시연용 합성 데이터입니다.
+          내부 운영 화면입니다. 표시되는 고객·물건·공실 이벤트는 시연용 합성 데이터이며 실제 고객 정보가 아닙니다.
         </p>
       </footer>
     </div>

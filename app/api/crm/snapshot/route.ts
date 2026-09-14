@@ -1,3 +1,4 @@
+import { isAdminRequest } from '@/lib/admin/auth'
 import { getState } from '@/lib/crm/store'
 import { buildFunnel, buildKpi, buildUpcomingTasks } from '@/lib/crm/services/analytics'
 import { activeNotificationAdapter } from '@/lib/adapters/notification'
@@ -5,6 +6,7 @@ import { activeNotificationAdapter } from '@/lib/adapters/notification'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  if (!(await isAdminRequest())) return Response.json({ error: '운영자 인증이 필요합니다.' }, { status: 401 })
   try {
     const state = getState()
     const now = new Date()

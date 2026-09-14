@@ -12,7 +12,7 @@ export interface NotificationPayload {
 }
 
 export interface NotificationResult {
-  status: 'SENT' | 'PREVIEW' | 'FAILED'
+  status: 'TEST_SENT' | 'DRAFT' | 'FAILED'
   adapter: string
   detail: string
 }
@@ -54,7 +54,7 @@ export function buildNotificationPayload(
   const dday = d === null ? '' : d < 0 ? ' (마감됨)' : d === 0 ? ' (오늘 마감!)' : ` · D-${d}`
 
   const body = [
-    `[집인사이트] ${customer.name}님 맞춤 주거기회 안내`,
+    `[청약인사이트] ${customer.name}님 맞춤 주거기회 안내`,
     '',
     '등록하신 조건에 부합하는 물건이 확인되어 안내드립니다.',
     '',
@@ -62,12 +62,15 @@ export function buildNotificationPayload(
     `   ${property.region} · ${property.housingType} · 전용 ${property.area}㎡`,
     `   보증금 ${formatMoney(property.deposit)} / 월 임대료 ${property.monthlyRent}만원`,
     '',
-    `■ 지원 우선순위 ${match.opportunityScore}점 (100점 만점)`,
-    `   ${match.reason}`,
+    `■ 희망조건 일치도 ${match.preferenceScore}점 (100점 만점)`,
+    ...match.reasons.map(r => `   · ${r}`),
+    '',
+    '■ 확인이 필요한 사항',
+    ...match.cautions.map(c => `   · ${c}`),
     '',
     `■ 접수 마감 ${formatDeadline(property.applicationEnd)}${dday}`,
     '',
-    '※ 본 안내는 참고용이며 공식 청약자격 판정이 아닙니다.',
+    '※ 자격요건은 아직 확인하지 않았습니다. 참고용 안내이며 공식 판정이 아닙니다.',
     '※ 지원 전 반드시 공식 모집공고문을 확인하시기 바랍니다.',
   ].join('\n')
 
@@ -76,6 +79,7 @@ export function buildNotificationPayload(
     propertyId: property.id,
     matchId: match.id,
     title: `맞춤 주거기회 안내 · ${property.name}`,
+    linkUrl: property.sourceUrl ?? undefined,
     body,
   }
 }
@@ -86,7 +90,7 @@ export function buildNotificationPayload(
  */
 export const kakaoMemoAdapter: NotificationAdapter = {
   id: 'kakao-memo',
-  label: '카카오톡 나에게 보내기',
+  label: '카카오톡 나에게 보내기 (테스트 전용)',
   isAvailable() {
     return Boolean(process.env.KAKAO_ACCESS_TOKEN)
   },
@@ -100,7 +104,7 @@ export const kakaoMemoAdapter: NotificationAdapter = {
         object_type: 'text',
         text: payload.body.slice(0, 200),
         link: { web_url: payload.linkUrl ?? 'https://www.applyhome.co.kr' },
-        button_title: '공고 확인',
+        button_title: payload.linkUrl ? '공고 원문' : '청약홈 안내',
       }
       const res = await fetch('https://kapi.kakao.com/v2/api/talk/memo/default/send', {
         method: 'POST',
@@ -114,7 +118,12 @@ export const kakaoMemoAdapter: NotificationAdapter = {
         const text = await res.text()
         return { status: 'FAILED', adapter: this.id, detail: `카카오 API ${res.status}: ${text.slice(0, 160)}` }
       }
-      return { status: 'SENT', adapter: this.id, detail: '카카오톡 나에게 보내기 전송 완료' }
+      return {
+        status: 'TEST_SENT',
+        adapter: this.id,
+        // "나에게 보내기"는 운영자 본인 계정으로만 간다. 수신자별 발송이 아니다.
+        detail: '운영자 본인 카카오톡으로 테스트 전송했습니다. 고객 수신자 발송이 아닙니다.',
+      }
     } catch (err) {
       return {
         status: 'FAILED',
@@ -128,15 +137,15 @@ export const kakaoMemoAdapter: NotificationAdapter = {
 /** 발송 권한이 없는 환경의 폴백 — payload 를 그대로 보존해 Dashboard 에 미리보기로 노출 */
 export const previewAdapter: NotificationAdapter = {
   id: 'preview',
-  label: '원문 생성 · 미발송',
+  label: '초안 생성 · 미발송',
   isAvailable() {
     return true
   },
   async send() {
     return {
-      status: 'PREVIEW',
+      status: 'DRAFT',
       adapter: 'preview',
-      detail: '카카오 채널 연동 전으로 실제 발송은 수행하지 않고 통보 원문만 보관합니다.',
+      detail: '카카오 채널 연동 전으로 발송하지 않고 알림 초안만 보관합니다.',
     }
   },
 }
@@ -147,20 +156,20 @@ export function activeNotificationAdapter(): NotificationAdapter {
   return CHAIN.find(a => a.isAvailable()) ?? previewAdapter
 }
 
-export async function dispatchNotification(payload: NotificationPayload) {
-  const adapter = activeNotificationAdapter()
+export async function dispatchNotification(payload: NotificationPayload, testApproved = false) {
+  const adapter = testApproved ? activeNotificationAdapter() : previewAdapter
   try {
     const result = await adapter.send(payload)
     if (result.status === 'FAILED' && adapter.id !== 'preview') {
       const fallback = await previewAdapter.send(payload)
-      return { ...fallback, detail: `${result.detail} → 미리보기로 폴백` }
+      return { ...fallback, detail: `${result.detail} → 초안으로 보관` }
     }
     return result
   } catch (err) {
     return {
-      status: 'PREVIEW' as const,
+      status: 'DRAFT' as const,
       adapter: 'preview',
-      detail: `어댑터 예외로 폴백: ${err instanceof Error ? err.message : String(err)}`,
+      detail: `어댑터 예외로 초안 보관: ${err instanceof Error ? err.message : String(err)}`,
     }
   }
 }

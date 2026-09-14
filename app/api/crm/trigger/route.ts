@@ -1,9 +1,11 @@
+import { isAdminRequest } from '@/lib/admin/auth'
 import { NextRequest } from 'next/server'
 import { triggerVacancyEvent } from '@/lib/crm/store'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  if (!(await isAdminRequest())) return Response.json({ error: '운영자 인증이 필요합니다.' }, { status: 401 })
   try {
     let propertyId: string | undefined
     try {

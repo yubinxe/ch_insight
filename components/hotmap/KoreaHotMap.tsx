@@ -264,7 +264,14 @@ export default function KoreaHotMap({
     zoomBy(1.18, x, y)
   }, [zoomBy])
 
-  const wrapW = wrapRef.current?.clientWidth ?? 400
+  const [wrapW, setWrapW] = useState(400)
+  useEffect(() => {
+    const element = wrapRef.current
+    if (!element) return
+    const observer = new ResizeObserver(entries => setWrapW(entries[0].contentRect.width))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
   const tooltipStyle = tooltip ? positionTooltip(tooltip.x, tooltip.y, wrapW) : null
 
   const regionTooltipData =

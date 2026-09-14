@@ -129,7 +129,7 @@ export default function ApplicationsView() {
                             <span style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>
                               ~{shortDate(p?.applicationEnd ?? null)}
                             </span>
-                            {a.opportunityScore !== undefined && <ScoreBadge score={a.opportunityScore} />}
+                            {a.preferenceScore !== undefined && <ScoreBadge score={a.preferenceScore} />}
                           </div>
                         </button>
                       )
@@ -153,7 +153,7 @@ export default function ApplicationsView() {
           <>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Chip tone="accent">{STAGE_LABEL[focus.stage]}</Chip>
-              {focus.opportunityScore !== undefined && <Chip>우선순위 {focus.opportunityScore}점</Chip>}
+              {focus.preferenceScore !== undefined && <Chip>우선순위 {focus.preferenceScore}점</Chip>}
               {focusProperty && <Chip>{focusProperty.housingType}</Chip>}
             </div>
 

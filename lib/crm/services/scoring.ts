@@ -1,21 +1,79 @@
-import type { Customer, MatchScoreBreakdown, Property } from '../types'
+import type { Customer, Property } from '../types'
+
+/** 탐색에는 확인하지 않은 연령·소득·가구 사실을 만들지 않는다. */
+export interface SearchConditions {
+  preferredRegions: string[]
+  preferredHousingTypes: Customer['preferredHousingTypes']
+  maxDeposit: number | null
+  maxMonthlyRent: number | null
+  minArea: number | null
+}
 
 /**
- * Opportunity Score — "당첨확률"이 아니다.
- * 통계적으로 검증된 당첨 확률이 아니라, 고객 조건 대비 지원 우선순위 점수다.
+ * 후보 판정은 서로 의미가 다른 4가지를 분리한다.
  *
- * 가중치: 지역 30 · 가격 20 · 면적 15 · 주택유형 15 · 경쟁강도 10 · 마감긴급도 10
+ *  1) 자격(eligibility)   — 소득·자산·거주기간 등 공식 요건. 자격 엔진 전까지 전부 UNKNOWN.
+ *  2) 예산(budget)        — 사용자가 정한 상한. 기본 후보의 필수조건이다.
+ *  3) 선호 적합도(fit)    — 지역·면적·주택유형이 희망과 얼마나 맞는지.
+ *  4) 마감 긴급도(urgency)— 언제까지 접수인지. 적합도를 올리지 않는다.
+ *
+ * 이 넷을 하나의 점수로 합치지 않는다. 합치면 "예산 초과인데 점수가 높은" 결과가 나온다.
  */
-export const SCORE_WEIGHTS = {
-  region: 30,
-  affordability: 20,
-  area: 15,
-  housingType: 15,
-  competition: 10,
-  urgency: 10,
+
+/** 선호 적합도 가중치 — 예산·마감은 여기에 포함하지 않는다 */
+export const FIT_WEIGHTS = {
+  region: 50,
+  area: 25,
+  housingType: 25,
 } as const
 
-/** 인접 생활권 — 1지망이 아니어도 부분 점수를 준다 */
+/** 자격 판정 엔진이 없으므로 현재 가능한 상태는 UNKNOWN 뿐이다 */
+export type EligibilityStatus = 'UNKNOWN'
+
+export interface BudgetCheck {
+  /** 상한 초과액(만원). 0 이면 상한 이내 */
+  depositOver: number
+  rentOver: number
+  /** 상한 이내 여유액(만원). 초과 시 0 */
+  depositRoom: number
+  rentRoom: number
+  withinBudget: boolean
+}
+
+export interface PreferenceFit {
+  regionScore: number
+  areaScore: number
+  housingTypeScore: number
+  /** 지역·면적·유형만 반영한 0~100 */
+  preferenceScore: number
+}
+
+export type UrgencyLevel = 'UNKNOWN' | 'CLOSED' | 'TODAY' | 'IMMINENT' | 'SOON' | 'NORMAL' | 'UPCOMING'
+
+export interface UrgencyInfo {
+  daysLeft: number | null
+  level: UrgencyLevel
+  label: string
+}
+
+export type CandidateTier = 'PRIMARY' | 'RELAXED'
+
+export interface Candidate {
+  propertyId: string
+  fit: PreferenceFit
+  budget: BudgetCheck
+  urgency: UrgencyInfo
+  eligibility: EligibilityStatus
+  /** 실제 값 차이로 만든 근거 문장 */
+  reasons: string[]
+  /** 확인이 필요한 사항 */
+  cautions: string[]
+  tier: CandidateTier
+  /** 기본 후보에서 제외된 이유 (RELAXED 일 때만) */
+  excludedBy: ('DEPOSIT' | 'RENT' | 'CLOSED')[]
+}
+
+/** 인접 생활권 — 1순위가 아니어도 부분 점수를 준다 */
 const NEARBY: Record<string, string[]> = {
   관악구: ['동작구', '금천구', '영등포구', '서초구'],
   동작구: ['관악구', '영등포구', '서초구', '용산구'],
@@ -29,168 +87,204 @@ const NEARBY: Record<string, string[]> = {
   서대문구: ['마포구', '은평구'],
 }
 
-function regionScore(customer: Customer, property: Property) {
-  const prefs = customer.preferredRegions
-  if (prefs[0] === property.region) return 1
-  if (prefs.includes(property.region)) return 0.85
-  if (prefs.some(r => (NEARBY[r] ?? []).includes(property.region))) return 0.45
-  return 0
-}
-
-function affordabilityScore(customer: Customer, property: Property) {
-  // 보증금·월세 각각 예산 대비 여유도. 초과 시 급격히 감점.
-  const depositRatio = property.deposit / Math.max(1, customer.maxDeposit)
-  const rentRatio = property.monthlyRent / Math.max(1, customer.maxMonthlyRent)
-  const one = (ratio: number) => {
-    if (ratio <= 0.7) return 1
-    if (ratio <= 1) return 1 - (ratio - 0.7) * 0.5 // 0.85~1
-    if (ratio <= 1.2) return 0.5 - (ratio - 1) * 1.5 // 0.2~0.5
-    return 0
-  }
-  return one(depositRatio) * 0.5 + one(rentRatio) * 0.5
-}
-
-function areaScore(customer: Customer, property: Property) {
-  const diff = property.area - customer.minArea
-  if (diff >= 0 && diff <= 8) return 1
-  if (diff > 8) return Math.max(0.6, 1 - (diff - 8) * 0.03)
-  if (diff >= -3) return 0.6
-  if (diff >= -6) return 0.3
-  return 0
-}
-
-function housingTypeScore(customer: Customer, property: Property) {
-  if (customer.preferredHousingTypes[0] === property.housingType) return 1
-  if (customer.preferredHousingTypes.includes(property.housingType)) return 0.8
-  return 0.15
-}
-
-/** 경쟁강도: 낮을수록 높은 점수 (참고 통계 기반) */
-function competitionScore(property: Property) {
-  const rate = property.competitionRate
-  if (rate <= 3) return 1
-  if (rate <= 8) return 0.8
-  if (rate <= 15) return 0.6
-  if (rate <= 30) return 0.4
-  return 0.2
-}
-
 /** 달력 기준 남은 일수 (자정~자정). 시:분에 따라 값이 흔들리지 않게 한다. */
 export function daysUntil(dateStr: string | null, now = new Date()) {
   if (!dateStr) return null
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const target = new Date(`${dateStr}T00:00:00`)
-  return Math.round((target.getTime() - today.getTime()) / 86400000)
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+  const target = Date.parse(`${dateStr}T00:00:00+09:00`)
+  if (!Number.isFinite(target)) return null
+  return Math.round((target - Date.parse(`${today}T00:00:00+09:00`)) / 86400000)
 }
 
-/** 마감 긴급도: 마감이 가까울수록 우선 검토 필요 */
-function urgencyScore(property: Property, now: Date) {
-  const d = daysUntil(property.applicationEnd, now)
-  if (d === null) return 0.3
-  if (d < 0) return 0
-  if (d <= 3) return 1
-  if (d <= 7) return 0.85
-  if (d <= 14) return 0.6
-  if (d <= 30) return 0.4
-  return 0.25
+export function formatMan(man: number) {
+  if (man >= 10000) {
+    const eok = Math.floor(man / 10000)
+    const rest = man % 10000
+    return rest ? `${eok}억 ${rest.toLocaleString()}만원` : `${eok}억원`
+  }
+  return `${man.toLocaleString()}만원`
 }
 
-export function scoreBreakdown(
-  customer: Customer,
-  property: Property,
-  now = new Date(),
-): MatchScoreBreakdown {
-  const r = (n: number) => Math.round(n * 100)
+function regionFit(customer: SearchConditions, property: Property) {
+  const prefs = customer.preferredRegions
+  if (prefs[0] === property.region) return { score: 100, kind: 'FIRST' as const }
+  if (prefs.includes(property.region)) return { score: 85, kind: 'LISTED' as const }
+  const near = prefs.find(r => (NEARBY[r] ?? []).includes(property.region))
+  if (near) return { score: 50, kind: 'NEARBY' as const, via: near }
+  return { score: 0, kind: 'OUTSIDE' as const }
+}
+
+/**
+ * 면적은 "희망 최소" 기준이다. 최소 이상이면 충족이며 넓다고 감점하지 않는다.
+ * 점수 구간으로 넓다/좁다를 역추정하지 않고 실제 ㎡ 차이를 그대로 쓴다.
+ */
+function areaFit(customer: SearchConditions, property: Property) {
+  const diff = property.area - (customer.minArea ?? 0)
+  if (diff >= 0) return { score: 100, diff }
+  if (diff >= -3) return { score: 60, diff }
+  if (diff >= -6) return { score: 30, diff }
+  return { score: 0, diff }
+}
+
+function housingTypeFit(customer: SearchConditions, property: Property) {
+  if (!customer.preferredHousingTypes.length) return { score: 100, kind: 'UNKNOWN' as const }
+  if (customer.preferredHousingTypes[0] === property.housingType) return { score: 100, kind: 'FIRST' as const }
+  if (customer.preferredHousingTypes.includes(property.housingType)) return { score: 85, kind: 'LISTED' as const }
+  return { score: 30, kind: 'OTHER' as const }
+}
+
+export function checkBudget(customer: SearchConditions, property: Property): BudgetCheck {
+  const depositOver = customer.maxDeposit === null ? 0 : Math.max(0, property.deposit - customer.maxDeposit)
+  const rentOver = customer.maxMonthlyRent === null ? 0 : Math.max(0, property.monthlyRent - customer.maxMonthlyRent)
   return {
-    regionScore: r(regionScore(customer, property)),
-    affordabilityScore: r(affordabilityScore(customer, property)),
-    areaScore: r(areaScore(customer, property)),
-    housingTypeScore: r(housingTypeScore(customer, property)),
-    competitionScore: r(competitionScore(property)),
-    urgencyScore: r(urgencyScore(property, now)),
+    depositOver,
+    rentOver,
+    depositRoom: depositOver > 0 || customer.maxDeposit === null ? 0 : customer.maxDeposit - property.deposit,
+    rentRoom: rentOver > 0 || customer.maxMonthlyRent === null ? 0 : customer.maxMonthlyRent - property.monthlyRent,
+    withinBudget: depositOver === 0 && rentOver === 0,
   }
 }
 
-export function opportunityScore(b: MatchScoreBreakdown) {
-  const total =
-    (b.regionScore * SCORE_WEIGHTS.region +
-      b.affordabilityScore * SCORE_WEIGHTS.affordability +
-      b.areaScore * SCORE_WEIGHTS.area +
-      b.housingTypeScore * SCORE_WEIGHTS.housingType +
-      b.competitionScore * SCORE_WEIGHTS.competition +
-      b.urgencyScore * SCORE_WEIGHTS.urgency) /
-    100
-  return Math.round(total)
-}
-
-/** 점수만으로는 행동할 수 없다 — 판단 가능한 문장으로 변환한다. */
-export function buildReason(
-  customer: Customer,
-  property: Property,
-  b: MatchScoreBreakdown,
-  now = new Date(),
-): string {
-  const strong: string[] = []
-  const weak: string[] = []
-
-  if (b.regionScore >= 85) strong.push('희망지역 일치')
-  else if (b.regionScore >= 40) weak.push('희망지역 인접 생활권')
-  else weak.push('희망지역과 거리 있음')
-
-  if (b.affordabilityScore >= 85) strong.push('예산 범위 내')
-  else if (b.affordabilityScore >= 50) weak.push('예산 상단에 근접')
-  else weak.push('예산 초과 구간')
-
-  if (b.areaScore >= 90) strong.push('희망면적 충족')
-  else if (b.areaScore >= 60) weak.push('희망면적보다 다소 좁음')
-  else weak.push('희망면적 미달')
-
-  if (b.housingTypeScore >= 80) strong.push(`선호 유형(${property.housingType})`)
-  else weak.push(`비선호 유형(${property.housingType})`)
-
-  const head = strong.length
-    ? `${strong.join('·')} 조건을 충족합니다.`
-    : '핵심 조건 일치도가 낮습니다.'
-
-  const competition =
-    property.competitionRate >= 20
-      ? `직전 공고 경쟁강도가 ${property.competitionRate}:1로 높은 편입니다.`
-      : property.competitionRate >= 8
-        ? `경쟁강도는 ${property.competitionRate}:1로 보통 수준입니다.`
-        : `경쟁강도가 ${property.competitionRate}:1로 낮아 상대적으로 유리합니다.`
-
+export function checkUrgency(property: Property, now = new Date()): UrgencyInfo {
+  if (property.status === 'CLOSED' || property.status === 'CANCELLED') return { daysLeft: null, level: 'CLOSED', label: property.status === 'CANCELLED' ? '모집 취소' : '접수 마감' }
   const d = daysUntil(property.applicationEnd, now)
-  const deadline =
-    d === null
-      ? '접수 일정이 아직 공개되지 않아 공고문 확인이 필요합니다.'
-      : d < 0
-        ? '접수가 마감되어 다음 공고 대기 대상입니다.'
-        : d === 0
-          ? '오늘이 접수 마감일이라 즉시 검토가 필요합니다.'
-          : d <= 3
-            ? `접수 마감까지 ${d}일 남아 즉시 검토가 필요합니다.`
-            : d <= 7
-              ? `접수 마감까지 ${d}일 남아 우선 검토 대상입니다.`
-              : `접수 마감까지 ${d}일 여유가 있습니다.`
+  if (d === null) return { daysLeft: null, level: 'UNKNOWN', label: '접수 마감일 미정' }
+  if (d < 0) return { daysLeft: d, level: 'CLOSED', label: '접수 마감' }
 
-  const caveat = weak.length ? ` 다만 ${weak.slice(0, 2).join(', ')} 항목은 확인이 필요합니다.` : ''
-
-  return `${head}${caveat} ${competition} ${deadline}`
+  const start = daysUntil(property.applicationStart, now)
+  if (start !== null && start > 0) {
+    return { daysLeft: d, level: 'UPCOMING', label: `${start}일 뒤 접수 시작` }
+  }
+  if (d === 0) return { daysLeft: 0, level: 'TODAY', label: '오늘 접수 마감' }
+  if (d <= 3) return { daysLeft: d, level: 'IMMINENT', label: `접수 마감 ${d}일 전` }
+  if (d <= 7) return { daysLeft: d, level: 'SOON', label: `접수 마감 ${d}일 전` }
+  return { daysLeft: d, level: 'NORMAL', label: `접수 마감까지 ${d}일` }
 }
 
-/** 두 기회를 비교해 의사결정 문장을 만든다 (단순 나열이 아닌 해석) */
-export function compareOpportunities(
-  a: { property: Property; score: number; breakdown: MatchScoreBreakdown },
-  b: { property: Property; score: number; breakdown: MatchScoreBreakdown },
+export function evaluateFit(customer: SearchConditions, property: Property): PreferenceFit {
+  const r = regionFit(customer, property)
+  const a = areaFit(customer, property)
+  const h = housingTypeFit(customer, property)
+  const preferenceScore = Math.round(
+    (r.score * FIT_WEIGHTS.region + a.score * FIT_WEIGHTS.area + h.score * FIT_WEIGHTS.housingType) / 100,
+  )
+  return { regionScore: r.score, areaScore: a.score, housingTypeScore: h.score, preferenceScore }
+}
+
+/** 근거 문장은 전부 실제 값 차이에서 만든다 */
+function buildReasons(customer: SearchConditions, property: Property, budget: BudgetCheck): string[] {
+  const out: string[] = []
+
+  const r = regionFit(customer, property)
+  if (r.kind === 'FIRST') out.push(`희망 1순위 지역 ${property.region}`)
+  else if (r.kind === 'LISTED') out.push(`희망지역 ${property.region}`)
+  else if (r.kind === 'NEARBY') out.push(`희망하신 ${r.via} 인접 생활권`)
+
+  if (budget.depositOver === 0 && budget.rentOver === 0 && customer.maxDeposit !== null) {
+    out.push(
+      `보증금 ${formatMan(property.deposit)} · 월 ${property.monthlyRent}만원 — 상한 대비 보증금 ${formatMan(
+        budget.depositRoom,
+      )} 여유`,
+    )
+  }
+
+  const a = areaFit(customer, property)
+  if (a.diff >= 0 && customer.minArea !== null) {
+    out.push(
+      a.diff === 0
+        ? `전용 ${property.area}㎡ — 희망 최소 면적과 동일`
+        : `전용 ${property.area}㎡ — 희망 최소 ${customer.minArea}㎡보다 ${a.diff}㎡ 넓음`,
+    )
+  }
+
+  const h = housingTypeFit(customer, property)
+  if (h.kind !== 'OTHER' && h.kind !== 'UNKNOWN') out.push(`관심 주택유형 ${property.housingType}`)
+
+  return out
+}
+
+function buildCautions(
+  customer: SearchConditions,
+  property: Property,
+  budget: BudgetCheck,
+  urgency: UrgencyInfo,
+): string[] {
+  const out: string[] = []
+
+  if (budget.depositOver > 0) {
+    out.push(
+      `보증금 ${formatMan(property.deposit)} — 상한 ${formatMan(customer.maxDeposit ?? 0)}보다 ${formatMan(
+        budget.depositOver,
+      )} 초과`,
+    )
+  }
+  if (budget.rentOver > 0) {
+    out.push(
+      `월 임대료 ${property.monthlyRent}만원 — 상한 ${customer.maxMonthlyRent}만원보다 ${budget.rentOver}만원 초과`,
+    )
+  }
+
+  const a = areaFit(customer, property)
+  if (a.diff < 0) {
+    out.push(`전용 ${property.area}㎡ — 희망 최소 ${customer.minArea}㎡보다 ${Math.abs(a.diff)}㎡ 좁음`)
+  }
+
+  const h = housingTypeFit(customer, property)
+  if (h.kind === 'OTHER') out.push(`관심 목록에 없는 유형 (${property.housingType})`)
+
+  // 자격 엔진이 없으므로 항상 미확인이다. 미확인을 불충족으로 단정하지 않는다.
+  out.push('소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다')
+  if (customer.maxDeposit === null || customer.maxMonthlyRent === null) out.push('정하지 않은 주거비 항목은 예산 충족 여부를 확인하지 않았습니다')
+
+  if (urgency.level === 'CLOSED') out.push('접수가 마감된 공고입니다')
+  if (urgency.level === 'UNKNOWN') out.push('접수 마감일이 공고에 공개되지 않았습니다')
+  if (!property.resultDate) out.push('당첨자 발표일이 공고에 공개되지 않았습니다')
+
+  return out
+}
+
+export function buildCandidate(customer: SearchConditions, property: Property, now = new Date()): Candidate {
+  const fit = evaluateFit(customer, property)
+  const budget = checkBudget(customer, property)
+  const urgency = checkUrgency(property, now)
+
+  const excludedBy: Candidate['excludedBy'] = []
+  if (budget.depositOver > 0) excludedBy.push('DEPOSIT')
+  if (budget.rentOver > 0) excludedBy.push('RENT')
+  if (urgency.level === 'CLOSED') excludedBy.push('CLOSED')
+
+  return {
+    propertyId: property.id,
+    fit,
+    budget,
+    urgency,
+    eligibility: 'UNKNOWN',
+    reasons: buildReasons(customer, property, budget),
+    cautions: buildCautions(customer, property, budget, urgency),
+    tier: excludedBy.length === 0 ? 'PRIMARY' : 'RELAXED',
+    excludedBy,
+  }
+}
+
+/**
+ * 두 후보를 비교해 의사결정 문장을 만든다.
+ * 예산을 만족하는 후보끼리만 비교하며, 비용·경쟁환경을 함께 언급한다.
+ */
+export function compareCandidates(
+  a: { property: Property; candidate: Candidate },
+  b: { property: Property; candidate: Candidate },
 ): string {
-  const [hi, lo] = a.score >= b.score ? [a, b] : [b, a]
+  const [hi, lo] =
+    a.candidate.fit.preferenceScore >= b.candidate.fit.preferenceScore ? [a, b] : [b, a]
+
   const cheaper =
-    hi.property.monthlyRent + hi.property.deposit / 100 <
-    lo.property.monthlyRent + lo.property.deposit / 100
+    hi.property.monthlyRent + hi.property.deposit / 100 < lo.property.monthlyRent + lo.property.deposit / 100
   const lessCompetitive = hi.property.competitionRate < lo.property.competitionRate
+
   const bits: string[] = []
   if (cheaper) bits.push('비용 부담이 낮고')
-  if (lessCompetitive) bits.push('경쟁강도가 완만해')
-  const why = bits.length ? bits.join(' ') : '조건 일치도가 높아'
-  return `${lo.property.name}보다 ${hi.property.name}이(가) ${why} 지원 우선순위가 높습니다.`
+  if (lessCompetitive) bits.push('직전 공고 경쟁이 덜해')
+  const why = bits.length ? bits.join(' ') : '희망 조건에 더 가까워'
+
+  return `${lo.property.name}보다 ${hi.property.name}이(가) ${why} 먼저 살펴보시기 좋습니다.`
 }

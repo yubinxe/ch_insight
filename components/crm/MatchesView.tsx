@@ -32,7 +32,7 @@ export default function MatchesView() {
   )
 
   const rows = useMemo(
-    () => (data?.matches ?? []).filter(m => m.opportunityScore >= minScore),
+    () => (data?.matches ?? []).filter(m => m.preferenceScore >= minScore),
     [data, minScore],
   )
 
@@ -132,14 +132,14 @@ export default function MatchesView() {
                         </div>
                       </td>
                       <td style={{ maxWidth: 420, fontSize: 13, lineHeight: 1.55 }}>
-                        {m.reason}
+                        {m.reasons.join(' · ')}
                         {openId === m.id && (
                           <div style={{ marginTop: 12 }}>
                             <ScoreBars breakdown={m} />
                           </div>
                         )}
                       </td>
-                      <td className="num"><ScoreBadge score={m.opportunityScore} /></td>
+                      <td className="num"><ScoreBadge score={m.preferenceScore} /></td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                           <button

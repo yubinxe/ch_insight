@@ -57,46 +57,21 @@ export function buildKpi(state: CrmState, now = new Date()): CrmKpi {
     newVacancyToday: state.events.filter(e => isToday(e.occurredAt, now)).length,
     matchedCustomers: new Set(state.matches.map(m => m.customerId)).size,
     activeApplications: state.applications.filter(a => ACTIVE_STAGES.includes(a.stage)).length,
-    notifications: state.notifications.length,
+    notifications: 0,
     repeatApplicants,
     repeatRate: appliedCustomers ? Math.round((repeatApplicants / appliedCustomers) * 100) : 0,
   }
 }
 
 export function buildFunnel(state: CrmState): FunnelStep[] {
-  const perCustomer = countByCustomer(state.applications)
-  const notified = new Set(state.notifications.map(n => n.customerId)).size
+  // 운영 데모는 실제 소비자 퍼널과 모집단이 다르다. 합성 과거이력은 아래에서 제외한다.
+  const sessionApps = state.applications.filter(a => a.createdAt >= state.seededAt)
   return [
-    {
-      key: 'profile',
-      label: '조건 등록',
-      value: state.customers.length,
-      hint: '조건 등록 완료 고객',
-    },
-    {
-      key: 'matched',
-      label: '매칭 발생',
-      value: new Set(state.matches.map(m => m.customerId)).size,
-      hint: '지원 우선순위 70점 이상 기회 보유',
-    },
-    {
-      key: 'notified',
-      label: '통보 완료',
-      value: notified,
-      hint: '맞춤 알림 생성 고객',
-    },
-    {
-      key: 'applied',
-      label: '지원 전환',
-      value: perCustomer.size,
-      hint: '지원 절차에 진입',
-    },
-    {
-      key: 'repeat',
-      label: '재지원 (2회+)',
-      value: [...perCustomer.values()].filter(n => n >= 2).length,
-      hint: '핵심 지표 · 재지원률',
-    },
+    { key: 'profile', label: '시연 조건', value: state.customers.length, hint: '합성 고객 · 실사용 성과 아님' },
+    { key: 'matched', label: '후보 생성', value: new Set(state.matches.map(m => m.customerId)).size, hint: '이번 시연의 선호조건 일치 고객' },
+    { key: 'draft', label: '알림 초안', value: state.notifications.filter(n => n.status === 'DRAFT').length, hint: '미발송 · 고객 발송 아님' },
+    { key: 'prepared', label: '준비 초안', value: sessionApps.length, hint: '자동 생성 포함 · 실제 신청 아님' },
+    { key: 'delivered', label: '고객 발송', value: 0, hint: '수신자별 발송 미연결 · 미측정' },
   ]
 }
 

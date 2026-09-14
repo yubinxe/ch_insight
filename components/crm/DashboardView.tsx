@@ -281,8 +281,8 @@ export default function DashboardView() {
               sub={notificationAdapter.label}
               right={
                 latestNotification ? (
-                  <Chip tone={latestNotification.status === 'SENT' ? 'pos' : 'warn'} dot>
-                    {latestNotification.status === 'SENT' ? '발송 완료' : '발송 대기'}
+                  <Chip tone={latestNotification.status === 'TEST_SENT' ? 'warn' : 'default'} dot>
+                    {latestNotification.status === 'TEST_SENT' ? '운영자 테스트 전송' : '초안 · 미발송'}
                   </Chip>
                 ) : undefined
               }
@@ -307,7 +307,7 @@ export default function DashboardView() {
                 <div className="kakao-phone">
                   <div className="kakao-sender">
                     <span className="kakao-avatar">🏠</span>
-                    집인사이트
+                    청약인사이트
                   </div>
                   <div className="kakao-bubble">{latestNotification.body}</div>
                 </div>
@@ -443,7 +443,7 @@ export default function DashboardView() {
                             </td>
                             <td className="muted">{c?.preferredRegions.join(', ') ?? '-'}</td>
                             <td className="num">
-                              <ScoreBadge score={m.opportunityScore} />
+                              <ScoreBadge score={m.preferenceScore} />
                             </td>
                           </tr>
                         )
@@ -466,7 +466,7 @@ export default function DashboardView() {
               <Section title={`1순위 대상 · ${result.topCustomer.name} (${result.topCustomer.id})`}>
                 <ScoreBars breakdown={result.matches[0]} />
                 <div className="crm-note crm-note--accent" style={{ marginTop: 12 }}>
-                  {result.matches[0].reason}
+                  {result.matches[0].reasons.join(' · ')}
                 </div>
               </Section>
             )}
@@ -475,15 +475,15 @@ export default function DashboardView() {
               <Section
                 title="생성된 통보 원문"
                 right={
-                  <Chip tone={result.notification.status === 'SENT' ? 'pos' : 'warn'} dot>
-                    {result.notification.status === 'SENT' ? '발송 완료' : '발송 대기'}
+                  <Chip tone={result.notification.status === 'TEST_SENT' ? 'warn' : 'default'} dot>
+                    {result.notification.status === 'TEST_SENT' ? '운영자 테스트 전송' : '초안 · 미발송'}
                   </Chip>
                 }
               >
                 <div className="kakao-phone">
                   <div className="kakao-sender">
                     <span className="kakao-avatar">🏠</span>
-                    집인사이트
+                    청약인사이트
                   </div>
                   <div className="kakao-bubble">{result.notification.body}</div>
                 </div>
@@ -495,31 +495,9 @@ export default function DashboardView() {
               </Section>
             )}
 
-            {result.application && (
-              <Section title="지원 절차 등록 및 일정 편성">
-                <div className="crm-chip-row" style={{ marginBottom: 12 }}>
-                  <Chip tone="accent">{STAGE_LABEL[result.application.stage]}</Chip>
-                  <Chip>일정 {result.tasks.length}건</Chip>
-                  {result.tasks.some(t => t.status === 'PENDING_DATE') && (
-                    <Chip tone="warn">
-                      날짜 미정 {result.tasks.filter(t => t.status === 'PENDING_DATE').length}건
-                    </Chip>
-                  )}
-                </div>
-                <div className="crm-table-wrap" style={{ margin: 0, padding: 0 }}>
-                  <table className="crm-table">
-                    <tbody>
-                      {result.tasks.map(t => (
-                        <tr key={t.id}>
-                          <td>{t.title}</td>
-                          <td className="num muted tnums">{t.dueDate ?? '날짜 미정'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Section>
-            )}
+            <div className="crm-note" style={{ marginTop: 4 }}>
+              이벤트는 후보와 알림 초안까지만 만듭니다. 실제 지원은 고객이 직접 선택할 때만 생성됩니다.
+            </div>
 
             <div className="crm-filter-row">
               <Link href="/matches" className="crm-btn crm-btn--sm">

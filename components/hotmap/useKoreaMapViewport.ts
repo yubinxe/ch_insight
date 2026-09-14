@@ -17,7 +17,7 @@ export function useKoreaMapViewport(full: MapView) {
   const viewRef = useRef(view)
   const animRef = useRef(0)
 
-  viewRef.current = view
+  useEffect(() => { viewRef.current = view }, [view])
 
   const minW = full.w / 14
 

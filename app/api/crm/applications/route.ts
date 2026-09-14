@@ -1,3 +1,4 @@
+import { isAdminRequest } from '@/lib/admin/auth'
 import { NextRequest } from 'next/server'
 import { advanceApplication, createApplication } from '@/lib/crm/store'
 import { APPLICATION_STAGES, type ApplicationStage } from '@/lib/crm/types'
@@ -5,6 +6,7 @@ import { APPLICATION_STAGES, type ApplicationStage } from '@/lib/crm/types'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  if (!(await isAdminRequest())) return Response.json({ error: '운영자 인증이 필요합니다.' }, { status: 401 })
   try {
     const body = await req.json()
     const { customerId, propertyId } = body ?? {}
@@ -23,6 +25,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!(await isAdminRequest())) return Response.json({ error: '운영자 인증이 필요합니다.' }, { status: 401 })
   try {
     const body = await req.json()
     const { id, stage } = body ?? {}

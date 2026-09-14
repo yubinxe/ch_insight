@@ -1,12 +1,11 @@
 import { generateCustomers } from './seed-customers'
 import { generateProperties } from './seed-properties'
-import { matchCustomersToProperty } from './services/matching'
+import { findCustomersForProperty } from './services/matching'
 import { buildTasks } from './services/scheduling'
 import { createRng } from './rng'
 import {
   buildNotificationPayload,
   dispatchNotification,
-  activeNotificationAdapter,
 } from '@/lib/adapters/notification'
 import type {
   ActivityKind,
@@ -77,12 +76,16 @@ function seedHistory(state: CrmState) {
         customerId: customer.id,
         propertyId: property.id,
         stage,
-        opportunityScore: rng.int(62, 94),
+        preferenceScore: rng.int(62, 94),
         createdAt: created.toISOString(),
         updatedAt: created.toISOString(),
       }
       state.applications.push(app)
-      state.tasks.push(...buildTasks(app, property).map(t => ({ ...t, status: 'DONE' as const })))
+      state.tasks.push(
+        ...buildTasks(property, { applicationId: app.id, won: stage === 'WON' || stage === 'CONTRACT' }).map(
+          t => ({ ...t, status: (t.dueDate ? 'DONE' : t.status) as typeof t.status }),
+        ),
+      )
     }
   }
 }
@@ -164,13 +167,13 @@ export function createApplication(
     propertyId,
     stage: 'DISCOVERED',
     matchId: match?.id,
-    opportunityScore: match?.opportunityScore,
+    preferenceScore: match?.preferenceScore,
     createdAt: at,
     updatedAt: at,
   }
   state.applications.push(application)
 
-  const tasks = buildTasks(application, property)
+  const tasks = buildTasks(property, { applicationId: application.id })
   state.tasks.push(...tasks)
 
   const roundNo = state.applications.filter(a => a.customerId === customerId).length
@@ -179,11 +182,12 @@ export function createApplication(
     `${customer.name}(${customerId}) 지원 등록 · ${property.name} — 통산 ${roundNo}회차`,
     application.id,
   )
-  const dated = tasks.filter(t => t.dueDate).length
-  const pending = tasks.length - dated
+  const official = tasks.filter(t => t.source === 'OFFICIAL' && t.dueDate).length
+  const recommended = tasks.filter(t => t.source === 'RECOMMENDED' && t.dueDate).length
+  const unknown = tasks.filter(t => !t.dueDate).length
   log(
     'TASK',
-    `일정 ${dated}건 편성${pending ? ` · 날짜 미정 ${pending}건 보류` : ''}`,
+    `일정 편성 · 공식 기한 ${official}건 / 준비 권장일 ${recommended}건${unknown ? ` / 날짜 미정 ${unknown}건` : ''}`,
     application.id,
   )
 
@@ -207,8 +211,6 @@ export interface TriggerResult {
   matches: Match[]
   topCustomer: Customer | null
   notification: NotificationLog | null
-  application: Application | null
-  tasks: Task[]
 }
 
 /**
@@ -251,14 +253,29 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
     event.id,
   )
 
-  const matches = matchCustomersToProperty(target, state.customers, {
-    threshold: 70,
-    limit: 60,
+  const found = findCustomersForProperty(target, state.customers, { minFit: 60, limit: 60, now })
+  const matches: Match[] = found.map(({ customer, candidate }) => ({
+    id: uid('M'),
+    customerId: customer.id,
+    propertyId: target.id,
+    preferenceScore: candidate.fit.preferenceScore,
+    regionScore: candidate.fit.regionScore,
+    areaScore: candidate.fit.areaScore,
+    housingTypeScore: candidate.fit.housingTypeScore,
+    withinBudget: candidate.budget.withinBudget,
+    eligibility: candidate.eligibility,
+    urgencyLevel: candidate.urgency.level,
+    reasons: candidate.reasons,
+    cautions: candidate.cautions,
+    createdAt: now.toISOString(),
     eventId: event.id,
-    now,
-  })
+  }))
   state.matches = [...matches, ...state.matches].slice(0, 400)
-  log('MATCH', `적격 고객 ${matches.length}명 추출 · 지원 우선순위 70점 이상`, event.id)
+  log(
+    'MATCH',
+    `선호조건 일치 고객 ${matches.length}명 · 예산 이내 · 자격요건 미확인`,
+    event.id,
+  )
 
   const top = matches[0]
   const topCustomer = top ? (customerById(top.customerId) ?? null) : null
@@ -266,7 +283,7 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
   if (top && topCustomer) {
     log(
       'SCORE',
-      `${topCustomer.name}(${topCustomer.id}) 지원 우선순위 ${top.opportunityScore}점 · 1순위 통보 대상`,
+      `${topCustomer.name}(${topCustomer.id}) 선호 적합도 ${top.preferenceScore}점 · 알림 초안 1순위`,
       top.id,
     )
   }
@@ -289,26 +306,18 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
       createdAt: nowIso(),
     }
     state.notifications.unshift(notification)
+    const created = notification
     log(
       'NOTIFICATION',
-      result.status === 'SENT'
-        ? `${topCustomer.name} 카카오 통보 발송 완료`
-        : `${topCustomer.name} 통보 ${activeNotificationAdapter().label}`,
-      notification.id,
+      result.status === 'TEST_SENT'
+        ? `${topCustomer.name} 알림 초안 — 운영자 본인 계정으로 테스트 전송 (수신자 발송 아님)`
+        : `${topCustomer.name} 알림 초안 생성 — 발송하지 않음`,
+      created.id,
     )
   }
 
-  let application: Application | null = null
-  let tasks: Task[] = []
-  if (top && topCustomer) {
-    const created = createApplication(topCustomer.id, target.id, top)
-    if (created) {
-      application = created.application
-      tasks = created.tasks
-    }
-  }
-
+  // 사용자가 선택하지 않은 지원은 만들지 않는다. 이벤트는 후보와 알림 초안까지만 만든다.
   state.triggerQueue = state.triggerQueue.filter(id => id !== target.id)
 
-  return { event, property: target, matches, topCustomer, notification, application, tasks }
+  return { event, property: target, matches, topCustomer, notification }
 }

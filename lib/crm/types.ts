@@ -45,7 +45,7 @@ export interface Customer {
   dataOrigin: DataOrigin
 }
 
-export type PropertyStatus = 'OPEN' | 'UPCOMING' | 'CLOSED'
+export type PropertyStatus = 'OPEN' | 'UPCOMING' | 'CLOSED' | 'CANCELLED'
 
 export interface Property {
   id: string
@@ -64,10 +64,19 @@ export interface Property {
   monthlyRent: number
   supplyCount: number
   vacancyCount: number
-  /** YYYY-MM-DD | null */
+  /**
+   * 공고 원문에 적힌 공식 일자. 원문에 없으면 null 이며 임의로 만들지 않는다.
+   * YYYY-MM-DD
+   */
   applicationStart: string | null
   applicationEnd: string | null
+  /** 서류 제출 마감 — 접수 마감과 다른 날짜다. 복사하지 않는다 */
+  documentDeadline: string | null
   resultDate: string | null
+  /** 계약 시작일 — 당첨자 발표에서 역산하지 않는다 */
+  contractStart: string | null
+  /** 공고 원문 URL. 없으면 null 이며 상세 링크를 원문인 것처럼 쓰지 않는다 */
+  sourceUrl: string | null
   status: PropertyStatus
   /** 직전 공고 경쟁률(배수). 공개 통계 기반 참고값 */
   competitionRate: number
@@ -91,21 +100,27 @@ export interface VacancyEvent {
   dataOrigin: DataOrigin
 }
 
-export interface MatchScoreBreakdown {
-  regionScore: number
-  affordabilityScore: number
-  areaScore: number
-  housingTypeScore: number
-  competitionScore: number
-  urgencyScore: number
-}
-
-export interface Match extends MatchScoreBreakdown {
+/**
+ * 하나의 고객 × 하나의 물건 판정 결과.
+ * 자격 / 예산 / 선호 적합도 / 마감 긴급도를 한 점수로 합치지 않는다.
+ */
+export interface Match {
   id: string
   customerId: string
   propertyId: string
-  opportunityScore: number
-  reason: string
+  /** 지역·면적·유형만 반영한 선호 적합도 0~100 */
+  preferenceScore: number
+  regionScore: number
+  areaScore: number
+  housingTypeScore: number
+  /** 사용자가 정한 예산 상한 이내인지 */
+  withinBudget: boolean
+  /** 자격 판정 엔진 전까지 항상 UNKNOWN */
+  eligibility: 'UNKNOWN'
+  urgencyLevel: string
+  /** 실제 값 차이로 만든 근거 */
+  reasons: string[]
+  cautions: string[]
   createdAt: string
   eventId?: string
 }
@@ -151,26 +166,44 @@ export interface Application {
   propertyId: string
   stage: ApplicationStage
   matchId?: string
-  opportunityScore?: number
+  /** 지원 시점의 선호 적합도 (당첨확률이 아니다) */
+  preferenceScore?: number
   createdAt: string
   updatedAt: string
 }
 
-export type TaskStatus = 'TODO' | 'DONE' | 'PENDING_DATE'
+export type TaskStatus = 'TODO' | 'DONE' | 'DATE_UNKNOWN' | 'BLOCKED'
 export type ReminderType = 'KAKAO' | 'PUSH' | 'NONE'
+
+/** 일정 항목의 성격 */
+export type TaskKind = 'REVIEW' | 'APPLY' | 'DOCUMENT' | 'RESULT' | 'CONTRACT'
+
+/**
+ * OFFICIAL    — 공고 원문에 적힌 기한
+ * RECOMMENDED — 공식 기한에서 역산한 준비 권장일
+ */
+export type TaskSource = 'OFFICIAL' | 'RECOMMENDED'
 
 export interface Task {
   id: string
   applicationId: string
   title: string
-  /** 공고에 날짜가 없으면 null — 임의 생성하지 않는다 */
+  kind: TaskKind
+  source: TaskSource
+  /** 공고에 기준 일자가 없으면 null — 임의 생성하지 않는다 */
   dueDate: string | null
   status: TaskStatus
+  hint?: string
   reminderType: ReminderType
 }
 
 export type NotificationChannel = 'KAKAO'
-export type NotificationStatus = 'SENT' | 'PREVIEW' | 'FAILED'
+/**
+ * DRAFT      — 원문만 생성, 발송하지 않음
+ * TEST_SENT  — 운영자 본인 계정으로만 전송 (수신자 발송이 아니다)
+ * FAILED     — 전송 시도 실패
+ */
+export type NotificationStatus = 'DRAFT' | 'TEST_SENT' | 'FAILED'
 
 export interface NotificationLog {
   id: string
@@ -201,4 +234,73 @@ export interface ActivityLog {
   kind: ActivityKind
   message: string
   refId?: string
+}
+
+// ──────────────────────────────────────────────────────────
+// 소비자 계정 · 관심공고 · 알림 설정
+// 가입 전 탐색과 가입 후 계정을 같은 세션으로 이어 붙인다.
+// ──────────────────────────────────────────────────────────
+
+/** 탐색 단계에서 받는 조건. 자격 판정에 쓰는 정밀 정보는 여기에 넣지 않는다. */
+export interface SearchProfile {
+  regions: string[]
+  housingTypes: HousingType[]
+  householdType: HouseholdType | null
+  maxDeposit: number | null
+  maxMonthlyRent: number | null
+  minArea: number | null
+  /** 사용자가 정하지 않은 항목은 임의로 채우지 않고 비워 둔다 */
+  unknownFields: string[]
+  updatedAt: string
+}
+
+export interface ConsumerUser {
+  id: string
+  email: string
+  nickname: string
+  createdAt: string
+}
+
+export interface SavedNotice {
+  id: string
+  sessionId: string
+  userId: string | null
+  propertyId: string
+  createdAt: string
+}
+
+export type AlertScope = 'NEW_NOTICE' | 'DEADLINE'
+
+export interface AlertSubscription {
+  id: string
+  sessionId: string
+  userId: string | null
+  scope: AlertScope
+  /** DEADLINE 일 때만 값이 있다 */
+  propertyId: string | null
+  /** NEW_NOTICE 일 때 감시할 조건 */
+  profile: SearchProfile | null
+  channel: 'EMAIL'
+  /** 동의 시각 — 동의 없이 발송하지 않는다 */
+  consentedAt: string
+  createdAt: string
+}
+
+/** 소비자 세션 — 가입 전 탐색을 보존하고 가입 시 계정에 연결한다 */
+export interface ConsumerSession {
+  id: string
+  userId: string | null
+  profile: SearchProfile | null
+  /** 가입 절차로 넘어가기 직전의 의도. 가입 후 이 지점으로 되돌린다 */
+  pendingIntent: PendingIntent | null
+  createdAt: string
+  lastSeenAt: string
+}
+
+export type PendingIntentKind = 'SAVE_NOTICE' | 'ALERT_NEW' | 'ALERT_DEADLINE'
+
+export interface PendingIntent {
+  kind: PendingIntentKind
+  propertyId: string | null
+  createdAt: string
 }

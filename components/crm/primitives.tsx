@@ -1,8 +1,14 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { SCORE_WEIGHTS } from '@/lib/crm/services/scoring'
-import type { MatchScoreBreakdown } from '@/lib/crm/types'
+import { FIT_WEIGHTS } from '@/lib/crm/services/scoring'
+
+/** 선호 적합도 세부 점수 */
+export interface FitBreakdown {
+  regionScore: number
+  areaScore: number
+  housingTypeScore: number
+}
 
 export function PageHead({
   title,
@@ -79,23 +85,20 @@ export function ScoreBadge({ score, large }: { score: number; large?: boolean })
     <span
       className={`score-badge${large ? ' score-badge--lg' : ''}`}
       data-tier={scoreTier(score)}
-      title="지원 우선순위 점수 (당첨확률이 아닙니다)"
+      title="선호조건 일치도 (당첨확률·자격 판정이 아닙니다)"
     >
       {score}
     </span>
   )
 }
 
-const BAR_ROWS: { key: keyof MatchScoreBreakdown; label: string; weight: number }[] = [
-  { key: 'regionScore', label: '지역', weight: SCORE_WEIGHTS.region },
-  { key: 'affordabilityScore', label: '가격', weight: SCORE_WEIGHTS.affordability },
-  { key: 'areaScore', label: '면적', weight: SCORE_WEIGHTS.area },
-  { key: 'housingTypeScore', label: '주택유형', weight: SCORE_WEIGHTS.housingType },
-  { key: 'competitionScore', label: '경쟁강도', weight: SCORE_WEIGHTS.competition },
-  { key: 'urgencyScore', label: '마감 긴급도', weight: SCORE_WEIGHTS.urgency },
+const BAR_ROWS: { key: keyof FitBreakdown; label: string; weight: number }[] = [
+  { key: 'regionScore', label: '지역', weight: FIT_WEIGHTS.region },
+  { key: 'areaScore', label: '면적', weight: FIT_WEIGHTS.area },
+  { key: 'housingTypeScore', label: '주택유형', weight: FIT_WEIGHTS.housingType },
 ]
 
-export function ScoreBars({ breakdown }: { breakdown: MatchScoreBreakdown }) {
+export function ScoreBars({ breakdown }: { breakdown: FitBreakdown }) {
   return (
     <div className="score-bars">
       {BAR_ROWS.map(row => {
