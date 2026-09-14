@@ -1,4 +1,4 @@
-# 집플리즈 (myhomeplz) — Housing Opportunity CRM
+# 집인사이트 (myhomeplz) — Housing Opportunity CRM
 
 사용자의 주거조건을 한 번 저장하면, 적합한 청약·임대 기회를 자동 탐지하고 우선순위를 정해
 알림부터 지원 일정까지 관리하는 AI 기반 Housing Opportunity CRM.
@@ -25,9 +25,9 @@ API 키가 없어도 Mock/합성 데이터로 전체 데모가 동작한다.
 1. `/dashboard` 접속 — 등록 고객 100 · 관리 주택 50 · 현재 공실 3 · 신규 이벤트 0 · 추천대상 0
 2. **공실 이벤트 발생** 클릭
 3. `H023` 공실 `0 → 1` 생성 → Matching Engine 실행 → 조건 일치 고객 추출
-4. 최고 Opportunity Score 고객에게 맞춤 알림 생성 (카카오 payload)
-5. 지원 Pipeline 생성 → 접수·서류·발표 일정 자동 생성
-6. Event Stream 에 Detection → Matching → CRM → Action 전 과정 기록
+4. 지원 우선순위가 가장 높은 고객에게 맞춤 알림 생성 (카카오 payload)
+5. 지원 절차 생성 → 접수·서류·발표 일정 자동 생성
+6. "지금 일어나는 일" 스트림에 전 과정 기록
 
 `데모 초기화` 버튼으로 언제든 정상상태로 되돌릴 수 있다.
 
@@ -36,17 +36,17 @@ API 키가 없어도 Mock/합성 데이터로 전체 데모가 동작한다.
 | 경로 | 설명 |
 |------|------|
 | `/` | Consumer Landing |
-| `/analyze` | 조건 입력 → 지원 가능 주택 · Opportunity Score · 추천 사유 |
-| `/dashboard` | 운영 대시보드 (KPI · Event Stream · North Star 퍼널 · 알림 · 마감 일정) |
+| `/analyze` | 3단계 위저드 → 지원 가능 주택 · 지원 우선순위 · 추천 사유 |
+| `/dashboard` | 운영 대시보드 (KPI · 이벤트 스트림 · 퍼널 · 알림 · 마감 일정) |
 | `/customers` | 고객 CRM 목록 · 상세 (조건 · 지원이력 · 추천 기회) |
 | `/properties` | 관리 주택 · 개별 공실 이벤트 트리거 |
 | `/matches` | 추천 랭킹 · 점수 구성 · 지원 시작 |
 | `/applications` | 지원 Pipeline(Kanban) · 일정 Timeline · 단계 이동 |
 | `/insights` | 기존 청약홈 공공데이터 통계 대시보드 |
 
-## Opportunity Score
+## 지원 우선순위 점수 (Opportunity Score)
 
-"당첨확률"이 아니라 **지원 우선순위 점수**다. 통계적으로 검증되지 않은 확률은 생성하지 않는다.
+"당첨확률"이 아니라 **지원 우선순위 점수**다. UI에는 항상 한국어로 노출한다. 통계적으로 검증되지 않은 확률은 생성하지 않는다.
 
 ```
 지역 적합도   30%
@@ -78,6 +78,14 @@ API 키가 없어도 Mock/합성 데이터로 전체 데모가 동작한다.
 
 발송이 불가능해도 Notification payload 생성 → `notifications` 저장 → Dashboard Preview 까지
 동일하게 동작하므로 데모가 중단되지 않는다.
+
+## UI 원칙
+
+- 전문용어는 한국어 우선. `Opportunity Score` → `지원 우선순위 점수`, `Pipeline` → `지원 절차`.
+- `/analyze` 는 3단계 위저드(지역 → 가구 → 예산)로, 한 화면에 질문 하나만 던진다.
+- 대시보드는 첫 방문자에게 버튼이 무슨 일을 하는지 먼저 설명하는 온보딩 배너를 띄운다.
+- 내비게이션은 사용자용(홈·내 기회 분석)과 운영용을 구분선으로 분리한다.
+- 디자인 토큰은 `app/crm.css` 상단(간격·타입·엘리베이션 스케일)에 모아둔다.
 
 ## 구조
 

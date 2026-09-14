@@ -3,7 +3,7 @@ import './globals.css'
 import './crm.css'
 
 export const metadata: Metadata = {
-  title: '집플리즈 — 주거기회 탐지 · 지원관리 CRM',
+  title: '집인사이트 — 주거기회 탐지 · 지원관리 CRM',
   description:
     '조건을 한 번 저장하면 청약·임대 기회를 자동 탐지하고, 우선순위·알림·지원 일정까지 관리하는 Housing Opportunity CRM',
 }

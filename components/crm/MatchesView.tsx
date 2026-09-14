@@ -8,8 +8,10 @@ import {
   Empty,
   ErrorBox,
   PageHead,
+  Person,
   ScoreBadge,
   ScoreBars,
+  Spinner,
   TableSkeleton,
 } from './primitives'
 import { shortDate, useSnapshot, won } from './useSnapshot'
@@ -60,7 +62,7 @@ export default function MatchesView() {
     <>
       <PageHead
         title="추천 랭킹"
-        sub="공실·신규공고 이벤트가 발생할 때 실행된 매칭 결과입니다. 점수는 당첨확률이 아니라 지원 우선순위입니다."
+        sub="빈 집이나 새 공고가 생겼을 때 자동으로 돌아간 매칭 결과입니다. 점수는 당첨확률이 아니라 '어디부터 지원할지' 우선순위입니다."
         right={
           <div style={{ display: 'flex', gap: 6 }}>
             {[70, 80, 90].map(s => (
@@ -85,16 +87,18 @@ export default function MatchesView() {
       )}
 
       <Card>
-        <CardHead title={`매칭 ${rows.length}건`} sub="Opportunity Score 순" />
+        <CardHead title={`추천 ${rows.length}건`} sub="지원 우선순위 점수가 높은 순서" />
 
         {loading ? (
           <TableSkeleton rows={8} />
         ) : rows.length === 0 ? (
-          <Empty>
-            아직 매칭 결과가 없습니다.
+          <Empty title="아직 추천 결과가 없습니다" icon="spark">
+            <Link href="/dashboard" className="link-ink">
+              운영 대시보드
+            </Link>
+            에서 <strong>공실 이벤트 발생</strong>을 누르면
             <br />
-            <Link href="/dashboard" className="link-ink">운영 대시보드</Link>에서 공실 이벤트를 발생시키면
-            매칭 엔진이 실행됩니다.
+            조건이 맞는 고객이 여기에 점수순으로 쌓입니다.
           </Empty>
         ) : (
           <div className="crm-table-wrap">
@@ -104,8 +108,8 @@ export default function MatchesView() {
                   <th className="num">순위</th>
                   <th>고객</th>
                   <th>주택</th>
-                  <th>추천 사유</th>
-                  <th className="num">Score</th>
+                  <th>왜 추천하는지</th>
+                  <th className="num">우선순위</th>
                   <th />
                 </tr>
               </thead>
@@ -118,9 +122,8 @@ export default function MatchesView() {
                   return (
                     <tr key={m.id}>
                       <td className="num muted">{i + 1}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 600 }}>{c?.name ?? m.customerId}</div>
-                        <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>{m.customerId}</div>
+                      <td>
+                        <Person name={c?.name ?? m.customerId} id={m.customerId} />
                       </td>
                       <td style={{ minWidth: 170 }}>
                         <div style={{ fontWeight: 550 }}>{p?.name ?? m.propertyId}</div>
@@ -144,7 +147,7 @@ export default function MatchesView() {
                             className="crm-btn crm-btn--sm"
                             onClick={() => setOpenId(openId === m.id ? null : m.id)}
                           >
-                            {openId === m.id ? '접기' : '점수'}
+                            {openId === m.id ? '접기' : '점수 근거'}
                           </button>
                           {already ? (
                             <Chip tone="pos">지원 생성됨</Chip>
@@ -155,7 +158,7 @@ export default function MatchesView() {
                               onClick={() => apply(m.customerId, m.propertyId, key)}
                               disabled={busyId === key}
                             >
-                              {busyId === key ? '생성 중' : '지원 시작'}
+                              {busyId === key ? <Spinner /> : '지원 시작'}
                             </button>
                           )}
                         </div>

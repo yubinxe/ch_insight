@@ -69,33 +69,33 @@ export function buildFunnel(state: CrmState): FunnelStep[] {
   return [
     {
       key: 'profile',
-      label: '프로필 등록 고객',
+      label: '조건 저장한 고객',
       value: state.customers.length,
-      hint: '조건을 저장한 CRM 고객',
+      hint: '조건을 저장해 둔 사람',
     },
     {
       key: 'matched',
-      label: '매칭 발생 고객',
+      label: '맞는 기회 나온 고객',
       value: new Set(state.matches.map(m => m.customerId)).size,
-      hint: 'Opportunity Score 70점 이상 기회 보유',
+      hint: '지원 우선순위 70점 이상 기회 보유',
     },
     {
       key: 'notified',
-      label: '알림 수신 고객',
+      label: '알림 받은 고객',
       value: notified,
-      hint: '맞춤 알림이 생성된 고객',
+      hint: '맞춤 알림이 만들어진 고객',
     },
     {
       key: 'applied',
-      label: '지원 Pipeline 생성',
+      label: '실제 지원한 고객',
       value: perCustomer.size,
-      hint: '실제 지원 절차에 진입',
+      hint: '지원 절차에 진입',
     },
     {
       key: 'repeat',
-      label: '2회 이상 재지원',
+      label: '두 번 이상 지원',
       value: [...perCustomer.values()].filter(n => n >= 2).length,
-      hint: 'North Star — 반복지원률',
+      hint: '가장 중요한 지표 — 반복지원률',
     },
   ]
 }

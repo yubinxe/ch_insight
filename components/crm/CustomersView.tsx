@@ -10,6 +10,7 @@ import {
   ErrorBox,
   KeyValues,
   PageHead,
+  Person,
   ScoreBadge,
   Section,
   TableSkeleton,
@@ -61,7 +62,7 @@ export default function CustomersView() {
     <>
       <PageHead
         title="고객 CRM"
-        sub="연락처가 아니라 조건·자격·관심주택·지원이력·일정이 누적됩니다. 쌓일수록 다음 지원 비용이 줄어듭니다."
+        sub="연락처를 모아두는 곳이 아닙니다. 조건·자격·관심주택·지원이력·일정이 함께 쌓여서, 쓸수록 다음 지원이 쉬워집니다."
         right={
           data ? (
             <Chip tone="accent">
@@ -74,7 +75,7 @@ export default function CustomersView() {
       <Card>
         <CardHead
           title={`등록 고객 ${data?.customers.length ?? 0}명`}
-          sub="지원 횟수순 정렬"
+          sub="지원을 많이 한 순서"
           right={
             <input
               className="an-input"
@@ -89,13 +90,12 @@ export default function CustomersView() {
         {loading ? (
           <TableSkeleton rows={8} />
         ) : rows.length === 0 ? (
-          <Empty>검색 결과가 없습니다.</Empty>
+          <Empty title="검색 결과가 없습니다">다른 이름이나 지역으로 찾아보세요.</Empty>
         ) : (
           <div className="crm-table-wrap">
             <table className="crm-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>고객</th>
                   <th>가구</th>
                   <th>희망지역</th>
@@ -103,19 +103,20 @@ export default function CustomersView() {
                   <th className="num">예산(보증금/월)</th>
                   <th className="num">최소면적</th>
                   <th className="num">지원이력</th>
-                  <th className="num">최고 Score</th>
+                  <th className="num">최고 우선순위</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.slice(0, 100).map(({ customer, applications, bestScore }) => (
                   <tr key={customer.id} data-click="true" onClick={() => setFocusId(customer.id)}>
-                    <td className="muted">{customer.id}</td>
-                    <td style={{ fontWeight: 600 }}>{customer.name}</td>
+                    <td>
+                      <Person name={customer.name} id={customer.id} />
+                    </td>
                     <td className="muted">{customer.householdType} · {customer.age}세</td>
                     <td>{customer.preferredRegions.join(', ')}</td>
                     <td className="muted">{customer.preferredHousingTypes.join(', ')}</td>
-                    <td className="num">{won(customer.maxDeposit)} / {customer.maxMonthlyRent}만</td>
-                    <td className="num">{customer.minArea}㎡</td>
+                    <td className="num tnums">{won(customer.maxDeposit)} / {customer.maxMonthlyRent}만</td>
+                    <td className="num tnums">{customer.minArea}㎡</td>
                     <td className="num">
                       {applications >= 2 ? <Chip tone="pos">{applications}회</Chip> : `${applications}회`}
                     </td>
@@ -151,7 +152,7 @@ export default function CustomersView() {
 
             <Section title={`지원 이력 ${focusApps.length}회`}>
               {focusApps.length === 0 ? (
-                <Empty>아직 지원 이력이 없습니다.</Empty>
+                <Empty title="아직 지원 이력이 없습니다" icon="calendar" />
               ) : (
                 <div className="crm-table-wrap" style={{ margin: 0, padding: 0 }}>
                   <table className="crm-table">
@@ -182,10 +183,10 @@ export default function CustomersView() {
 
             <Section title="현재 추천 기회">
               {focusMatches.length === 0 ? (
-                <Empty>
-                  현재 매칭된 기회가 없습니다.
+                <Empty title="지금 매칭된 기회가 없습니다" icon="spark">
+                  대시보드에서 공실 이벤트를 발생시키면
                   <br />
-                  대시보드에서 공실 이벤트를 발생시키면 매칭이 실행됩니다.
+                  이 고객의 조건과 자동으로 대조합니다.
                 </Empty>
               ) : (
                 <div className="crm-table-wrap" style={{ margin: 0, padding: 0 }}>

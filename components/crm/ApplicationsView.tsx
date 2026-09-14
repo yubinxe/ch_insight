@@ -9,6 +9,7 @@ import {
   ErrorBox,
   KeyValues,
   PageHead,
+  Person,
   ScoreBadge,
   Section,
   TableSkeleton,
@@ -28,10 +29,6 @@ const BOARD_STAGES: ApplicationStage[] = [
   'CONTRACT',
   'LOST',
 ]
-
-function daysBetween(a: string, b: string) {
-  return Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / 86400000)
-}
 
 export default function ApplicationsView() {
   const { data, loading, error, reload } = useSnapshot()
@@ -56,16 +53,8 @@ export default function ApplicationsView() {
   const focusCustomer = focus ? customerById.get(focus.customerId) : undefined
   const siblingApps = focus ? (data?.applications ?? []).filter(a => a.customerId === focus.customerId) : []
 
-  // 간단한 Gantt — 공고 접수 시작 ~ 결과 발표일 구간에 Task 를 배치
-  const ganttRange = useMemo(() => {
-    const dated = focusTasks.map(t => t.dueDate).filter((d): d is string => !!d)
-    if (!dated.length) return null
-    const sorted = [...dated].sort()
-    const start = sorted[0]
-    const end = sorted[sorted.length - 1]
-    const span = Math.max(1, daysBetween(start, end))
-    return { start, end, span }
-  }, [focusTasks])
+  /** 체크포인트 타임라인에서 "지금 해야 할 것" 한 건만 강조한다 */
+  const nextTaskIndex = focusTasks.findIndex(t => t.status !== 'DONE')
 
   const advance = async (stage: ApplicationStage) => {
     if (!focus) return
@@ -94,7 +83,7 @@ export default function ApplicationsView() {
     <>
       <PageHead
         title="지원 관리"
-        sub="추천이 지원으로 이어지면 접수·서류·발표 일정이 자동 생성됩니다. 탈락한 건도 조건이 남아 재지원으로 연결됩니다."
+        sub="추천이 지원으로 이어지면 접수·서류·발표 일정이 자동으로 만들어집니다. 떨어진 건도 조건이 남아 다음 기회로 연결됩니다."
         right={
           data ? (
             <Chip tone="accent">
@@ -111,11 +100,13 @@ export default function ApplicationsView() {
       )}
 
       <Card>
-        <CardHead title="지원 Pipeline" sub="카드를 클릭하면 일정과 단계 변경이 열립니다." />
+        <CardHead title="지원 진행 현황" sub="카드를 누르면 일정과 단계 변경을 볼 수 있습니다." />
         {loading ? (
           <TableSkeleton rows={5} />
         ) : (data?.applications.length ?? 0) === 0 ? (
-          <Empty>아직 지원 건이 없습니다. 추천 랭킹에서 지원을 시작해 보세요.</Empty>
+          <Empty title="아직 지원 건이 없습니다" icon="calendar">
+            추천 랭킹에서 <strong>지원 시작</strong>을 누르면 여기에 나타납니다.
+          </Empty>
         ) : (
           <div className="kanban">
             {BOARD_STAGES.map(stage => {
@@ -143,9 +134,7 @@ export default function ApplicationsView() {
                         </button>
                       )
                     })}
-                    {list.length === 0 && (
-                      <div style={{ fontSize: 12, color: 'var(--ink-3)', padding: '8px 2px' }}>비어 있음</div>
-                    )}
+                    {list.length === 0 && <div className="kanban__empty">비어 있음</div>}
                   </div>
                 </div>
               )
@@ -164,7 +153,7 @@ export default function ApplicationsView() {
           <>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Chip tone="accent">{STAGE_LABEL[focus.stage]}</Chip>
-              {focus.opportunityScore !== undefined && <Chip>Score {focus.opportunityScore}</Chip>}
+              {focus.opportunityScore !== undefined && <Chip>우선순위 {focus.opportunityScore}점</Chip>}
               {focusProperty && <Chip>{focusProperty.housingType}</Chip>}
             </div>
 
@@ -181,32 +170,30 @@ export default function ApplicationsView() {
               />
             )}
 
-            <Section title="자동 생성된 일정">
+            <Section title="자동으로 만들어진 일정">
               {focusTasks.length === 0 ? (
-                <Empty>생성된 일정이 없습니다.</Empty>
+                <Empty title="생성된 일정이 없습니다" icon="calendar" />
               ) : (
                 <div className="gantt">
-                  {focusTasks.map(t => {
-                    const offset =
-                      ganttRange && t.dueDate ? (daysBetween(ganttRange.start, t.dueDate) / ganttRange.span) * 100 : 0
+                  {focusTasks.map((t, i) => {
+                    const done = t.status === 'DONE'
+                    const next = !done && i === nextTaskIndex
                     return (
                       <div key={t.id} className="gantt__row">
-                        <span className="gantt__label">{t.title}</span>
-                        <span className="gantt__track">
-                          <span
-                            className="gantt__bar"
-                            data-done={t.status === 'DONE' ? 'true' : 'false'}
-                            data-pending={t.dueDate === null ? 'true' : 'false'}
-                            style={
-                              t.dueDate
-                                ? { left: `${Math.min(96, Math.max(0, offset))}%`, width: 14 }
-                                : undefined
-                            }
-                          />
+                        <span
+                          className="gantt__mark"
+                          data-done={done ? 'true' : 'false'}
+                          data-next={next ? 'true' : 'false'}
+                        >
+                          {done ? '✓' : i + 1}
                         </span>
-                        <span className="gantt__date">
-                          {t.dueDate ?? 'date pending'}
+                        <span>
+                          <span className="gantt__label">{t.title}</span>
+                          <span className="gantt__sub">
+                            {next ? '다음 할 일' : done ? '완료' : t.dueDate ? '예정' : '공고에 날짜 미공개'}
+                          </span>
                         </span>
+                        <span className="gantt__date">{t.dueDate ?? '날짜 미정'}</span>
                       </div>
                     )
                   })}
@@ -214,13 +201,13 @@ export default function ApplicationsView() {
               )}
               {focusTasks.some(t => t.dueDate === null) && (
                 <div className="crm-note" style={{ marginTop: 12 }}>
-                  공고에 해당 날짜가 공개되지 않아 일부 일정은 <strong>date pending</strong> 상태입니다.
-                  임의 날짜를 만들지 않고 공고 갱신 시 자동 채워집니다.
+                  공고에 해당 날짜가 아직 공개되지 않아 일부 일정은 <strong>날짜 미정</strong>입니다.
+                  임의로 날짜를 만들지 않고, 공고가 갱신되면 자동으로 채워집니다.
                 </div>
               )}
             </Section>
 
-            <Section title="단계 이동">
+            <Section title="단계 바꾸기">
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {APPLICATION_STAGES.map(s => (
                   <button
@@ -264,11 +251,11 @@ export default function ApplicationsView() {
 
       <div style={{ marginTop: 'var(--gap)' }}>
         <Card>
-          <CardHead title="마감 임박 Task" sub="진행 중인 지원 건의 다가오는 일정" />
+          <CardHead title="곧 마감되는 할 일" sub="진행 중인 지원 건에서 다가오는 일정" />
           {loading ? (
             <TableSkeleton rows={5} />
           ) : (data?.upcomingTasks.length ?? 0) === 0 ? (
-            <Empty>다가오는 일정이 없습니다.</Empty>
+            <Empty title="다가오는 일정이 없습니다" icon="calendar" />
           ) : (
             <div className="crm-table-wrap">
               <table className="crm-table">
@@ -278,16 +265,16 @@ export default function ApplicationsView() {
                     <th>주택</th>
                     <th>할 일</th>
                     <th>마감일</th>
-                    <th className="num">D-Day</th>
+                    <th className="num">남은 기간</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(data?.upcomingTasks ?? []).map(t => (
                     <tr key={t.id} data-click="true" onClick={() => setFocusId(t.applicationId)}>
-                      <td>{t.customerName}</td>
+                      <td><Person name={t.customerName} id={t.customerId} /></td>
                       <td className="muted">{t.propertyName}</td>
                       <td>{t.title}</td>
-                      <td className="muted">{t.dueDate ?? '날짜 미정'}</td>
+                      <td className="muted tnums">{t.dueDate ?? '날짜 미정'}</td>
                       <td className="num">
                         <Chip tone={t.dday !== null && t.dday <= 3 ? 'hot' : t.dday !== null && t.dday <= 7 ? 'warn' : 'default'}>
                           {ddayLabel(t.dday)}

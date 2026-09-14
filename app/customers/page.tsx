@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import CrmShell from '@/components/crm/CrmShell'
 import CustomersView from '@/components/crm/CustomersView'
 
-export const metadata = { title: '고객 CRM — 집플리즈' }
+export const metadata = { title: '고객 CRM — 집인사이트' }
 
 export default function CustomersPage() {
   return (

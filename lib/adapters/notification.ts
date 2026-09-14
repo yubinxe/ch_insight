@@ -51,36 +51,32 @@ export function buildNotificationPayload(
   now = new Date(),
 ): NotificationPayload {
   const d = daysUntil(property.applicationEnd, now)
-  const dday = d === null ? '' : d < 0 ? ' (마감)' : d === 0 ? ' (오늘 마감)' : ` (D-${d})`
+  const dday = d === null ? '' : d < 0 ? ' (마감됨)' : d === 0 ? ' (오늘 마감!)' : ` · D-${d}`
 
   const body = [
-    '🏠 맞춤 임대주택 알림',
+    `🏠 ${customer.name}님, 조건에 맞는 집이 나왔어요`,
     '',
-    '조건과 높은 수준으로 일치하는',
-    '신규 주거기회가 발견되었습니다.',
-    '',
-    `서울 ${property.region}`,
-    property.housingType,
-    `전용 ${property.area}㎡`,
+    property.name,
+    `서울 ${property.region} · ${property.housingType} · 전용 ${property.area}㎡`,
     '',
     `보증금 ${formatMoney(property.deposit)}`,
     `월 임대료 ${property.monthlyRent}만원`,
     '',
-    `Opportunity Score: ${match.opportunityScore}`,
+    `지원 우선순위 ${match.opportunityScore}점 / 100점`,
     '',
-    '추천 이유',
+    '이 집을 추천하는 이유',
     match.reason,
     '',
-    `접수 마감: ${formatDeadline(property.applicationEnd)}${dday}`,
+    `📅 접수 마감 ${formatDeadline(property.applicationEnd)}${dday}`,
     '',
-    '※ AI 참고 분석입니다. 지원 전 공식 공고문을 확인하세요.',
+    '※ AI 참고 분석이에요. 지원 전 공식 공고문을 꼭 확인해 주세요.',
   ].join('\n')
 
   return {
     customerId: customer.id,
     propertyId: property.id,
     matchId: match.id,
-    title: `맞춤 임대주택 알림 · ${property.name}`,
+    title: `조건에 맞는 집 알림 · ${property.name}`,
     body,
   }
 }
@@ -133,7 +129,7 @@ export const kakaoMemoAdapter: NotificationAdapter = {
 /** 발송 권한이 없는 환경의 폴백 — payload 를 그대로 보존해 Dashboard 에 미리보기로 노출 */
 export const previewAdapter: NotificationAdapter = {
   id: 'preview',
-  label: '알림 미리보기 (발송 안 함)',
+  label: '미리보기 (아직 발송 안 함)',
   isAvailable() {
     return true
   },
@@ -141,7 +137,7 @@ export const previewAdapter: NotificationAdapter = {
     return {
       status: 'PREVIEW',
       adapter: 'preview',
-      detail: '메시징 연동이 없어 발송하지 않고 알림 원문만 저장했습니다.',
+      detail: '카카오 연동이 아직 없어 실제로 보내지는 않고, 보낼 내용만 저장했습니다.',
     }
   },
 }

@@ -176,14 +176,14 @@ export function createApplication(
   const roundNo = state.applications.filter(a => a.customerId === customerId).length
   log(
     'APPLICATION',
-    `${customer.name}(${customerId}) 지원 Pipeline 생성 — ${property.name} · 통산 ${roundNo}회차`,
+    `${customer.name}(${customerId}) 지원 절차 생성 — ${property.name} · 통산 ${roundNo}회차`,
     application.id,
   )
   const dated = tasks.filter(t => t.dueDate).length
   const pending = tasks.length - dated
   log(
     'TASK',
-    `일정 ${dated}건 자동 생성${pending ? ` · 날짜 미정 ${pending}건 보류` : ''}`,
+    `할 일 ${dated}건 자동 생성${pending ? ` · 날짜 미정 ${pending}건 보류` : ''}`,
     application.id,
   )
 
@@ -247,7 +247,7 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
   state.events.unshift(event)
   log(
     'EVENT',
-    `신규 공실 ${target.id} 감지 — ${target.name} · 공실 ${previousVacancy} → ${target.vacancyCount}`,
+    `빈 집 발생 ${target.id} — ${target.name} · 공실 ${previousVacancy} → ${target.vacancyCount}건`,
     event.id,
   )
 
@@ -258,7 +258,7 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
     now,
   })
   state.matches = [...matches, ...state.matches].slice(0, 400)
-  log('MATCH', `조건 일치 고객 ${matches.length}명 추출 (Opportunity Score 70점 이상)`, event.id)
+  log('MATCH', `조건 맞는 고객 ${matches.length}명 추출 (지원 우선순위 70점 이상)`, event.id)
 
   const top = matches[0]
   const topCustomer = top ? (customerById(top.customerId) ?? null) : null
@@ -266,7 +266,7 @@ export async function triggerVacancyEvent(propertyId?: string): Promise<TriggerR
   if (top && topCustomer) {
     log(
       'SCORE',
-      `${topCustomer.name}(${topCustomer.id}) Opportunity Score ${top.opportunityScore} — 최우선 알림 대상`,
+      `${topCustomer.name}(${topCustomer.id}) 지원 우선순위 ${top.opportunityScore}점 — 1순위 알림 대상`,
       top.id,
     )
   }

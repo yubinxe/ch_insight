@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Card, CardHead } from '@/components/ui'
-import { Chip, DemoFlag, Empty, ErrorBox, PageHead, TableSkeleton } from './primitives'
+import { Chip, DemoFlag, Empty, ErrorBox, PageHead, Spinner, TableSkeleton } from './primitives'
 import { shortDate, useSnapshot, won } from './useSnapshot'
 import { triggerVacancy } from '@/lib/crm/client'
 import type { PropertyStatus } from '@/lib/crm/types'
@@ -62,8 +62,8 @@ export default function PropertiesView() {
     <>
       <PageHead
         title="관리 주택"
-        sub="공고 일정과 공실 상태를 감시합니다. 개별 주택에서 직접 공실 이벤트를 발생시킬 수도 있습니다."
-        right={<DemoFlag label="Synthetic Vacancy Data" />}
+        sub="공고 일정과 빈 집 상태를 계속 감시합니다. 원하는 주택에서 직접 공실 이벤트를 일으켜 볼 수도 있습니다."
+        right={<DemoFlag label="공실 데이터는 데모 합성" />}
       />
 
       {actionError && (
@@ -75,7 +75,7 @@ export default function PropertiesView() {
       <Card>
         <CardHead
           title={`주택 ${rows.length}건`}
-          sub="실제 공개 API는 개별 호실의 실시간 공실 정보를 제공하지 않습니다. 아래 공실 값은 데모용 합성 데이터입니다."
+          sub="실제 공개 API는 개별 호실의 실시간 공실 정보를 주지 않습니다. 아래 공실 수치는 데모용 합성 데이터입니다."
           right={
             <div className="crm-filter-row" style={{ margin: 0 }}>
               {FILTERS.map(f => (
@@ -97,7 +97,7 @@ export default function PropertiesView() {
         {loading ? (
           <TableSkeleton rows={8} />
         ) : rows.length === 0 ? (
-          <Empty>조건에 해당하는 주택이 없습니다.</Empty>
+          <Empty title="조건에 해당하는 주택이 없습니다">위 필터를 바꿔보세요.</Empty>
         ) : (
           <div className="crm-table-wrap">
             <table className="crm-table">
@@ -128,19 +128,19 @@ export default function PropertiesView() {
                     </td>
                     <td className="muted">{p.housingType}</td>
                     <td>{p.region}</td>
-                    <td className="num">{p.area}㎡</td>
-                    <td className="num">{won(p.deposit)}</td>
-                    <td className="num">{p.monthlyRent}만</td>
-                    <td className="num">{p.supplyCount}</td>
+                    <td className="num tnums">{p.area}㎡</td>
+                    <td className="num tnums">{won(p.deposit)}</td>
+                    <td className="num tnums">{p.monthlyRent}만</td>
+                    <td className="num tnums">{p.supplyCount}</td>
                     <td className="num">
-                      {p.vacancyCount > 0 ? <Chip tone="hot">{p.vacancyCount}</Chip> : <span className="muted">0</span>}
+                      {p.vacancyCount > 0 ? <Chip tone="hot" dot>{p.vacancyCount}</Chip> : <span className="muted">0</span>}
                     </td>
                     <td className="muted" style={{ whiteSpace: 'nowrap' }}>
                       {shortDate(p.applicationStart)} ~ {shortDate(p.applicationEnd)}
                     </td>
-                    <td className="num">{p.competitionRate}:1</td>
+                    <td className="num tnums">{p.competitionRate}:1</td>
                     <td>
-                      <Chip tone={p.status === 'OPEN' ? 'accent' : p.status === 'UPCOMING' ? 'default' : 'default'}>
+                      <Chip tone={p.status === 'OPEN' ? 'accent' : 'default'} dot>
                         {STATUS_LABEL[p.status]}
                       </Chip>
                     </td>
@@ -151,7 +151,7 @@ export default function PropertiesView() {
                         onClick={() => onTrigger(p.id)}
                         disabled={busyId === p.id}
                       >
-                        {busyId === p.id ? '처리 중' : '공실 발생'}
+                        {busyId === p.id ? <Spinner /> : '공실 발생'}
                       </button>
                     </td>
                   </tr>
