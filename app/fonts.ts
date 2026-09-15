@@ -11,7 +11,18 @@ export const pretendard = localFont({
 })
 
 /**
- * Gmarket Sans — 브랜드 인상과 짧은 후킹 문구 전용.
+ * Jalnan Gothic — 집캐치 브랜드 · 디스플레이 제목 전용.
+ * 굵고 인상이 강해 짧은 후킹 문구에만 쓰고, 본문·입력·상세정보에는 쓰지 않는다.
+ */
+export const jalnan = localFont({
+  src: [{ path: './fonts/JalnanGothicTTF.ttf', weight: '400 700', style: 'normal' }],
+  variable: '--font-display',
+  display: 'swap',
+  fallback: ['Pretendard Variable', 'Pretendard', 'system-ui', 'sans-serif'],
+})
+
+/**
+ * Gmarket Sans — 섹션 제목 등 보조 브랜드 타이포.
  * 긴 설명·숫자가 많은 상세 UI 에는 쓰지 않는다 (G마켓 공식 가이드).
  * TTF 를 프로젝트에 포함해 next/font 로 self-host 한다.
  */

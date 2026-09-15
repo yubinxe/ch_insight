@@ -18,8 +18,8 @@ const STEPS = [
 
 const FAQ = [
   {
-    q: '가입해야 볼 수 있나요?',
-    a: '아니요. 가입 없이 조건을 넣고 후보와 추천 이유까지 다 보실 수 있어요. 관심 공고를 저장하거나 알림을 받고 싶어졌을 때, 그때 이메일과 비밀번호로 계정을 만들면 됩니다.',
+    q: '관심조건을 저장하면 무엇이 달라지나요?',
+    a: '저장해두면 다음 방문에 같은 조건으로 후보를 바로 보여드리고, 조건에 맞는 새 기회가 생기면 알림을 보내드립니다. 가입 없이도 조건 입력과 후보 확인은 전부 가능합니다.',
   },
   {
     q: '알림은 어떤 내용이 오나요?',
@@ -30,7 +30,7 @@ const FAQ = [
     a: '아닙니다. 지금은 지역·주거비·면적처럼 희망 조건이 맞는지만 비교해 드립니다. 소득·자산·거주기간 같은 공식 자격요건은 확인하지 않으니, 지원 전 반드시 모집공고문을 읽어주세요.',
   },
   {
-    q: '지금 보이는 공고는 진짜인가요?',
+    q: '지금 보이는 공고는 실제 공고인가요?',
     a: '아닙니다. 현재 화면의 임대 공고는 서비스 구성을 보여드리기 위한 예시입니다. 공식 공고 연동은 준비 중이고, 연동 전까지 실제 공고인 척하지 않겠습니다.',
   },
 ]
@@ -72,16 +72,21 @@ export default function ConsumerHome() {
           <span className="cs-eyebrow">청약부터 공공임대까지</span>
 
           <h1 className="cs-hero-title">
-            내 조건에 맞는 집,
+            나에게 맞는 집,
             <br />
-            <em>기회부터</em> 찾아보세요.
+            <em>내집마련 기회</em>를
+            <br />
+            사로잡아 보세요.
           </h1>
 
-          <p className="cs-lead" style={{ marginTop: 24, maxWidth: 520 }}>복잡한 공고를 하나씩 비교하지 않아도 괜찮아요.<br />내 조건에 맞는 후보를 찾고,<br className="cs-mobile-break" /> 관심공고의 일정까지 챙겨보세요.</p>
+          <p className="cs-lead" style={{ marginTop: 26, maxWidth: 520 }}>
+            청약부터 공공임대까지, 지역·보증금·월 임대료·면적 기준으로
+            <br className="cs-mobile-break" /> 내 조건에 맞는 후보부터 확인해 보세요.
+          </p>
 
           <div className="cs-hero__cta">
             <Link href="/analyze" className="cs-btn cs-btn--primary">
-              내 조건으로 공고 찾기
+              내 조건으로 집 찾기
               <svg
                 width="18"
                 height="18"
@@ -125,18 +130,28 @@ export default function ConsumerHome() {
             </div>
             <p className="cs-notice__where">서울 동작구 · 전용 29㎡</p>
 
-            <div className="cs-notice__price">
-              <div className="cs-notice__deposit cs-num">6,500만원</div>
-              <div className="cs-notice__rent cs-num">월 임대료 32만원</div>
+            <div className="cs-price-grid">
+              <div>
+                <div className="cs-price-label">보증금</div>
+                <div className="cs-notice__deposit cs-num">6,500만원</div>
+              </div>
+              <div>
+                <div className="cs-price-label">월 임대료</div>
+                <div className="cs-notice__deposit cs-num">32만원</div>
+              </div>
             </div>
 
-            <ul className="cs-notice__reasons">
-              <li>희망 1순위 지역 동작구</li>
-              <li>전용 29㎡ — 희망 최소 28㎡보다 1㎡ 넓음</li>
-            </ul>
+            <div className="cs-reason-block">
+              <div className="cs-price-label">추천 이유</div>
+              <ul className="cs-notice__reasons">
+                <li>희망 1순위 지역</li>
+                <li>예산 범위 충족</li>
+                <li>희망면적 충족</li>
+              </ul>
+            </div>
 
             <div className="cs-notice__caution">
-              확인 필요 · 소득·자산 등 자격요건은 아직 확인하지 않았습니다
+              소득·자산 등 세부 자격은 <strong>공식 공고문 확인 필요</strong>
             </div>
           </div>
 

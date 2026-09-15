@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { isAdminEnabled, isAdminRequest } from '@/lib/admin/auth'
 import AdminLogin from '@/components/admin/AdminLogin'
 
-export const metadata = { title: '운영 · 청약인사이트' }
+export const metadata = { title: '운영 · 집캐치' }
 
 /**
  * 운영 화면은 매 요청 서버에서 인증을 확인한다.

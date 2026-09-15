@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export const metadata = { title: '청약 가이드 — 청약인사이트' }
+export const metadata = { title: '청약 가이드 — 집캐치' }
 
 const SECTIONS = [
   {

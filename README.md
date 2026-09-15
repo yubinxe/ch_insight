@@ -1,4 +1,4 @@
-# 청약인사이트
+# 집캐치
 
 청약·공공임대 공고를 찾는 **일반 소비자**를 위한 서비스다.
 조건을 한 번 입력하면 지금 지원할 수 있는 후보를 정리해 주고, 관심공고와 일정을 이어서 관리한다.
@@ -126,11 +126,49 @@ app/crm.css            운영 디자인 시스템
 
 Business logic 은 `lib/` 에 있고 UI 컴포넌트는 표현만 담당한다.
 
+## CRM 파이프라인
+
+```
+조건 저장 → (이벤트 발생) → 매칭 → Opportunity Score → 알림 → 클릭 추적 → Lead Score → 지원/문의
+```
+
+| 계층 | 위치 |
+|------|------|
+| 저장소 | `lib/db/repo.ts` — Supabase 없으면 메모리로 폴백 |
+| 스키마 | `supabase/schema.sql` |
+| 매칭 | `lib/services/matching.ts` |
+| 파이프라인 | `lib/services/pipeline.ts` |
+| Lead Score | `lib/services/lead-scoring.ts` — 점수표를 한 곳에만 둔다 |
+| 알림 채널 | `lib/notifications/provider.ts` + `telegram.ts` |
+| 데이터 수집 | `lib/adapters/applyhome.ts` (API) · `csv-opportunities.ts` (CSV) |
+| 상담 챗봇 | `lib/services/chat.ts` + `docs/scenarios/consultation.md` |
+
+**경쟁률이 없으면** 해당 가중치(10)를 나머지 항목에 재분배한다. 임의 경쟁 점수를 만들지 않는다.
+
+**알림 임계치**는 `MATCH_NOTIFY_THRESHOLD` 로만 바꾼다. 코드 곳곳에 숫자를 흩뿌리지 않는다.
+
+**클릭 추적**은 `/t/{notificationId}` 를 거친다. 알림 링크가 상세 페이지를 직접 가리키지 않으며
+쿼리스트링에 개인정보를 넣지 않는다.
+
+## 운영 화면에서 할 수 있는 것
+
+`/admin/dashboard` 에서:
+
+- **시연 데이터 생성** — 고객 100명 · 기회 60건 (결정적 시드, 전부 `is_demo`)
+- **청약홈 동기화** — 공공데이터 API 키가 있을 때 실제 모집공고를 가져온다
+- **데모 신규 공실 발생** — H023 공실 0→1 → 매칭 → 알림까지 연쇄 실행
+
+CSV 업로드는 `POST /api/admin/import` (multipart `file` 또는 JSON `csv`).
+결과로 `신규 / 업데이트 / 실패` 건수와 실패 사유를 돌려준다.
+
 ## 아직 안 된 것
 
-- **영속 저장** — 소비자 세션·관심공고·알림이 서버 메모리에만 있다. 재시작하면 사라진다.
-- **알림 발송** — 설정만 저장하고 실제 이메일을 보내지 않는다.
-- **공식 공고 연동** — 임대 공고는 전부 예시 데이터다.
+- **Supabase 미연결** — `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 가 없으면 메모리에 저장되고
+  서버 재시작 시 사라진다. 스키마는 `supabase/schema.sql` 로 준비돼 있다.
+- **공식 공고 연동** — 코드는 연결돼 있으나 `PUBLIC_DATA_API_KEY` 가 없어 실제 데이터가 비어 있다.
+  키를 넣으면 `/admin` → 청약홈 동기화로 바로 들어온다.
+- **텔레그램 발송** — `TELEGRAM_BOT_TOKEN` 과 고객별 `telegram_chat_id` 가 있어야 실제로 나간다.
+  없으면 `PREVIEW` 로 원문만 보관하며 발송 건수에 집계하지 않는다.
 - **자격 판정** — 소득·자산·거주기간을 확인하지 않는다. 모든 자격 상태는 `UNKNOWN`.
 - **인증 강화** — 이메일·비밀번호만 받으며 이메일 인증·재설정이 없다.
 

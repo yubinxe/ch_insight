@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { resolveSession } from '@/lib/consumer/session'
 import { listAlerts, subscribeAlert, track, unsubscribeAlert } from '@/lib/consumer/store'
 import { propertyById } from '@/lib/crm/store'
+import * as repo from '@/lib/db/repo'
 import type { AlertScope } from '@/lib/crm/types'
 
 export const dynamic = 'force-dynamic'
@@ -44,6 +45,17 @@ export async function POST(req: NextRequest) {
       propertyId: scope === 'DEADLINE' ? propertyId : null,
       profile: scope === 'NEW_NOTICE' ? session.profile : null,
     })
+    // 명시적 동의를 받은 경우에만 CRM 에서도 알림 대상으로 켠다
+    const customer = await repo.findCustomerBySession(session.id).catch(() => null)
+    if (customer) {
+      const pref = await repo.getPreference(customer.id).catch(() => null)
+      if (pref) {
+        await repo
+          .savePreference(customer.id, { ...pref, notification_enabled: true })
+          .catch(() => null)
+      }
+    }
+
     track(session, 'alert_opted_in', { scope, propertyId: propertyId ?? null })
 
     return Response.json({ alerts: listAlerts(session) })

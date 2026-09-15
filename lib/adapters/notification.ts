@@ -54,7 +54,7 @@ export function buildNotificationPayload(
   const dday = d === null ? '' : d < 0 ? ' (마감됨)' : d === 0 ? ' (오늘 마감!)' : ` · D-${d}`
 
   const body = [
-    `[청약인사이트] ${customer.name}님 맞춤 주거기회 안내`,
+    `[집캐치] ${customer.name}님 맞춤 주거기회 안내`,
     '',
     '등록하신 조건에 부합하는 물건이 확인되어 안내드립니다.',
     '',

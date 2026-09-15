@@ -1,12 +1,12 @@
 import CrmShell from '@/components/crm/CrmShell'
-import DashboardView from '@/components/crm/DashboardView'
+import CrmDashboard from '@/components/crm/CrmDashboard'
 
-export const metadata = { title: '운영 · 종합현황 — 청약인사이트' }
+export const metadata = { title: '운영 · CRM 종합현황 — 집캐치' }
 
-export default function DashboardPage() {
+export default function AdminDashboardPage() {
   return (
     <CrmShell>
-      <DashboardView />
+      <CrmDashboard />
     </CrmShell>
   )
 }

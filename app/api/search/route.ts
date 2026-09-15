@@ -3,6 +3,8 @@ import { NextRequest } from 'next/server'
 import { resolveSession } from '@/lib/consumer/session'
 import { saveProfile, track } from '@/lib/consumer/store'
 import { getState } from '@/lib/crm/store'
+import * as repo from '@/lib/db/repo'
+import { trackBehavior } from '@/lib/services/pipeline'
 import { findCandidatesForCustomer } from '@/lib/crm/services/matching'
 import { HOUSING_TYPES, type HousingType, type SearchProfile } from '@/lib/crm/types'
 
@@ -97,4 +99,34 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     )
   }
+}
+
+/**
+ * 탐색 조건을 customers + customer_preferences 로 저장한다.
+ * 가입 전이면 세션 ID 로 고객을 만들고, 가입 시 같은 세션이 계정에 승계된다.
+ * 알림 수신 동의는 여기서 켜지 않는다 — 별도 동의 절차가 있다.
+ */
+async function persistPreference(sessionId: string, profile: SearchProfile) {
+  let customer = await repo.findCustomerBySession(sessionId)
+  if (!customer) customer = await repo.upsertCustomer({ session_id: sessionId })
+
+  const existing = await repo.getPreference(customer.id)
+
+  await repo.savePreference(customer.id, {
+    preferred_regions: profile.regions,
+    // 사용자가 정하지 않은 항목은 null 로 보존한다 (임의값을 만들지 않는다)
+    max_deposit: profile.unknownFields.includes('maxDeposit') ? null : profile.maxDeposit,
+    max_monthly_rent: profile.unknownFields.includes('maxMonthlyRent') ? null : profile.maxMonthlyRent,
+    min_area: profile.unknownFields.includes('minArea') ? null : profile.minArea,
+    preferred_housing_types: profile.housingTypes,
+    move_in_period: null,
+    notification_enabled: existing?.notification_enabled ?? false,
+  })
+
+  await trackBehavior({
+    customerId: customer.id,
+    sessionId,
+    eventType: existing ? 'SEARCH_COMPLETED' : 'PREFERENCE_SAVED',
+    source: 'WEB',
+  })
 }

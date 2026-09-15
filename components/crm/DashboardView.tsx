@@ -307,7 +307,7 @@ export default function DashboardView() {
                 <div className="kakao-phone">
                   <div className="kakao-sender">
                     <span className="kakao-avatar">🏠</span>
-                    청약인사이트
+                    집캐치
                   </div>
                   <div className="kakao-bubble">{latestNotification.body}</div>
                 </div>
@@ -483,7 +483,7 @@ export default function DashboardView() {
                 <div className="kakao-phone">
                   <div className="kakao-sender">
                     <span className="kakao-avatar">🏠</span>
-                    청약인사이트
+                    집캐치
                   </div>
                   <div className="kakao-bubble">{result.notification.body}</div>
                 </div>
