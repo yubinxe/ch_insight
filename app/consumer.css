@@ -462,6 +462,30 @@
   color: var(--muted);
 }
 
+/* 실제 공고 — 예시(cs-sample)와 한눈에 갈라져야 한다 */
+.cs-official {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 2px;
+  border: 1px solid var(--brand);
+  background: rgba(49, 87, 213, 0.06);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand);
+  letter-spacing: -0.01em;
+}
+
+/* 공고에 임대조건이 없을 때 — 0원으로 채우지 않는다 */
+.cs-notice__unknown {
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 2px 0;
+}
+
 /* ── 공고 카드 — 표가 아니라 카탈로그 한 항목 ──────────── */
 .cs-notice-grid {
   display: grid;

@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { resolveSession } from '@/lib/consumer/session'
 import { saveProfile, track } from '@/lib/consumer/store'
 import { getState } from '@/lib/crm/store'
+import { listOfficialProperties } from '@/lib/consumer/official'
 import * as repo from '@/lib/db/repo'
 import { trackBehavior } from '@/lib/services/pipeline'
 import { findCandidatesForCustomer } from '@/lib/crm/services/matching'
@@ -67,7 +68,13 @@ export async function POST(req: NextRequest) {
       unknownFields,
       updatedAt: now.toISOString(),
     }
-    if (!body.readOnly) saveProfile(session.id, profile)
+    if (!body.readOnly) {
+      saveProfile(session.id, profile)
+      // CRM 기록은 응답을 막지 않는다. 실패해도 사용자는 후보를 본다.
+      await persistPreference(session.id, profile).catch(err => {
+        console.error('persistPreference', err)
+      })
+    }
 
     // 매칭 엔진은 Customer 형태를 받는다. 탐색 단계에서 모르는 값은 넣지 않는다.
     const searcher = {
@@ -76,8 +83,13 @@ export async function POST(req: NextRequest) {
       preferredHousingTypes: housingTypes,
     }
 
+    // 실제 공고 + 예시 공고를 함께 평가한다. 각 후보는 dataOrigin 으로 구분된다.
     const state = getState()
-    const outcome = findCandidatesForCustomer(searcher, state.properties, { now })
+    const official = await listOfficialProperties({ limit: 200 })
+    const outcome = findCandidatesForCustomer(searcher, [...official, ...state.properties], { now })
+    const officialInResult =
+      outcome.primary.filter(r => r.property.dataOrigin === 'OFFICIAL').length +
+      outcome.relaxed.filter(r => r.property.dataOrigin === 'OFFICIAL').length
 
     if (!body.readOnly) track(session, 'analysis_completed', {
       regionCount: regions.length,
@@ -90,8 +102,9 @@ export async function POST(req: NextRequest) {
       primary: outcome.primary,
       relaxed: outcome.relaxed,
       insight: outcome.insight,
-      // 표시된 물건이 실제 공고가 아님을 응답에서도 분명히 한다.
-      dataOrigin: 'SYNTHETIC' as const,
+      // 실제 공고와 예시가 섞일 수 있다. 하나로 뭉뚱그리지 않는다.
+      officialCount: officialInResult,
+      dataOrigin: officialInResult > 0 ? ('MIXED' as const) : ('SYNTHETIC' as const),
     })
   } catch (err) {
     return Response.json(

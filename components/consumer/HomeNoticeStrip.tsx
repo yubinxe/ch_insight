@@ -128,10 +128,19 @@ export default function HomeNoticeStrip() {
               property={row.property}
               candidate={{
                 propertyId: row.property.id,
-                fit: { regionScore: 0, areaScore: 0, housingTypeScore: 0, preferenceScore: 0 },
-                budget: { depositOver: 0, rentOver: 0, depositRoom: 0, rentRoom: 0, withinBudget: true },
+                fit: { regionScore: 0, areaScore: null, housingTypeScore: 0, preferenceScore: 0 },
+                // 조건 없이 둘러보는 화면이라 예산을 비교하지 않았다는 뜻이다
+                budget: {
+                  depositOver: 0,
+                  rentOver: 0,
+                  depositRoom: 0,
+                  rentRoom: 0,
+                  withinBudget: true,
+                  unverified: [],
+                },
                 urgency: row.urgency,
                 eligibility: 'UNKNOWN',
+                confidence: 'PARTIAL' as const,
                 reasons: [],
                 cautions: ['소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다'],
                 tier: 'PRIMARY',

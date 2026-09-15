@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       opportunityId: notification.opportunity_id,
       notificationId: notification.id,
       eventType: 'NOTIFICATION_CLICKED',
-      source: 'TELEGRAM',
+      source: 'EMAIL',
     }).catch(() => null)
     if (notification.match_id) await repo.updateMatchStatus(notification.match_id, 'VIEWED').catch(() => null)
   }

@@ -52,16 +52,24 @@ export interface Property {
   source: string
   announcementId: string
   name: string
-  housingType: HousingType
+  /**
+   * 표시용 원문 유형. 공공 API 는 '민영'·'국민'·'행복주택' 등 자체 표기를 쓴다.
+   * 선택지(HOUSING_TYPES)에 맞춰 바꿔 쓰지 않고 공고가 쓴 말을 그대로 둔다.
+   */
+  housingType: string
   region: string
   district: string
   address: string
+  /**
+   * 아래 셋은 공고 원문에 있을 때만 값이 있다.
+   * 청약홈 분양정보처럼 임대조건을 주지 않는 원본도 있으므로 0 으로 채우지 않는다.
+   */
   /** ㎡ */
-  area: number
+  area: number | null
   /** 만원 */
-  deposit: number
+  deposit: number | null
   /** 만원 */
-  monthlyRent: number
+  monthlyRent: number | null
   supplyCount: number
   vacancyCount: number
   /**
@@ -78,8 +86,8 @@ export interface Property {
   /** 공고 원문 URL. 없으면 null 이며 상세 링크를 원문인 것처럼 쓰지 않는다 */
   sourceUrl: string | null
   status: PropertyStatus
-  /** 직전 공고 경쟁률(배수). 공개 통계 기반 참고값 */
-  competitionRate: number
+  /** 직전 공고 경쟁률(배수). 공개 통계가 있을 때만. 없으면 null — 만들지 않는다 */
+  competitionRate: number | null
   dataOrigin: DataOrigin
 }
 
@@ -111,7 +119,8 @@ export interface Match {
   /** 지역·면적·유형만 반영한 선호 적합도 0~100 */
   preferenceScore: number
   regionScore: number
-  areaScore: number
+  /** 공고에 면적이 없으면 null */
+  areaScore: number | null
   housingTypeScore: number
   /** 사용자가 정한 예산 상한 이내인지 */
   withinBudget: boolean

@@ -13,7 +13,9 @@ export type ScenarioId = 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6' | 'S0'
 export interface ChatContext {
   hasPreference: boolean
   candidateCount: number | null
-  telegramConfigured: boolean
+  emailConfigured: boolean
+  /** 지금 저장소에 있는 실제 공고 수. 0 이면 예시만 있다 */
+  officialCount: number
   regions: string[]
 }
 
@@ -28,7 +30,6 @@ export interface ChatReply {
 export interface ExtractedInfo {
   email?: string
   phone?: string
-  telegramChatId?: string
   name?: string
   regions?: string[]
   maxDeposit?: number
@@ -44,8 +45,10 @@ const SEOUL_GU = [
 
 const EMAIL_RE = /[\w.+-]+@[\w-]+\.[\w.]+/
 const PHONE_RE = /01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}/
-const TELEGRAM_RE = /(?:텔레그램|telegram)[^\d]{0,10}(\d{6,})/i
-const NAME_RE = /(?:저는|제?\s*이름은?)\s*([가-힣]{2,4})(?:입니다|이에요|예요|이고|고요|요)?/
+// 뒤에 붙는 조사까지 이름으로 먹지 않게 lookahead 로 끊는다.
+// ("저는 김유빈입니다" 에서 '김유빈입' 을 잡던 문제)
+const NAME_RE =
+  /(?:저는|제?\s*이름은?)\s*([가-힣]{2,4})(?=입니다|이에요|예요|이라고|이고|고요|요|[^가-힣]|$)/
 
 /** "6500만원", "1억 2000", "보증금 7천" 같은 표기를 만원 정수로 */
 function parseMan(raw: string): number | null {
@@ -80,9 +83,6 @@ export function extractInfo(message: string): ExtractedInfo {
   const phone = message.match(PHONE_RE)
   if (phone) out.phone = phone[0].replace(/[\s.]/g, '-')
 
-  const tg = message.match(TELEGRAM_RE)
-  if (tg) out.telegramChatId = tg[1]
-
   const name = message.match(NAME_RE)
   if (name) out.name = name[1]
 
@@ -116,7 +116,6 @@ export function describeSaved(info: ExtractedInfo): string {
   if (info.name) bits.push('이름')
   if (info.email) bits.push('이메일')
   if (info.phone) bits.push('연락처')
-  if (info.telegramChatId) bits.push('텔레그램 수신 ID')
   if (info.regions?.length) bits.push(`희망지역(${info.regions.join('·')})`)
   if (info.maxDeposit !== undefined) bits.push(`보증금 상한 ${info.maxDeposit.toLocaleString()}만원`)
   if (info.maxMonthlyRent !== undefined) bits.push(`월 임대료 상한 ${info.maxMonthlyRent.toLocaleString()}만원`)
@@ -130,7 +129,7 @@ function detect(message: string): ScenarioId {
   if (/상담|문의|연락처|전화주|담당자/.test(m)) return 'S6'
   if (/진짜|실제공고|믿을|출처|예시데이터|가짜/.test(m)) return 'S5'
   if (/마감|일정|언제|접수기간|접수일/.test(m)) return 'S4'
-  if (/알림|알려줘|텔레그램|telegram|연락받/.test(m)) return 'S3'
+  if (/알림|알려줘|메일|이메일|연락받/.test(m)) return 'S3'
   if (/자격|조건이되|가능한가|될까요|해당되|자격요건|소득|자산/.test(m)) return 'S1'
   if (/추천|찾아|알아보|어디가|공고있|매물|집좀|구하고|봐주/.test(m)) return 'S2'
   return 'S0'
@@ -171,11 +170,11 @@ export function reply(message: string, ctx: ChatContext): ChatReply {
       return {
         scenario,
         text:
-          '조건에 맞는 새 공고가 뜨거나 관심공고 마감이 다가오면 알려드려요.\n' +
-          '받으시려면 수신 동의가 필요하고, 언제든 관심공고 화면에서 끄실 수 있습니다.' +
-          (ctx.telegramConfigured
+          '조건에 맞는 새 공고가 뜨거나 관심공고 마감이 다가오면 가입하신 이메일로 보내드려요.\n' +
+          '앱 설치나 별도 아이디 등록은 없습니다. 수신 동의만 해주시면 되고, 언제든 관심공고 화면에서 끄실 수 있어요.' +
+          (ctx.emailConfigured
             ? ''
-            : '\n\n다만 지금은 알림 채널 연동 전이라 설정만 저장되고 실제 발송은 아직 되지 않습니다.'),
+            : '\n\n다만 지금은 메일 발송 연동 전이라 설정만 저장되고 실제 발송은 아직 되지 않습니다.'),
         actions: [SAVED, ctx.hasPreference ? RESULTS : FIND],
       }
 
@@ -192,9 +191,13 @@ export function reply(message: string, ctx: ChatContext): ChatReply {
       return {
         scenario,
         text:
-          '지금 보이는 임대 공고는 서비스 구성을 보여드리기 위한 예시 데이터입니다.\n' +
-          '공식 공고 연동은 준비 중이고, 연동 전까지 실제 공고인 것처럼 표시하지 않습니다.\n' +
-          '원문 링크가 있는 공고는 링크를 함께 드립니다.',
+          ctx.officialCount > 0
+            ? `공고 목록에는 청약홈에서 가져온 실제 모집공고 ${ctx.officialCount}건과 예시 공고가 함께 있어요.\n` +
+              '카드에 공식 공고 / 예시 공고로 구분해 두었고, 공식 공고는 원문 링크를 함께 드립니다.\n' +
+              '공고에 없는 금액·면적은 채우지 않고 “모집공고문 확인”으로 둡니다.'
+            : '지금 보이는 공고는 서비스 구성을 보여드리기 위한 예시 데이터입니다.\n' +
+              '공식 공고 연동 전까지 실제 공고인 것처럼 표시하지 않습니다.\n' +
+              '원문 링크가 있는 공고는 링크를 함께 드립니다.',
         actions: [NOTICES],
       }
 

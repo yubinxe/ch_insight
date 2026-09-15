@@ -4,7 +4,7 @@ import * as repo from '@/lib/db/repo'
 import { trackBehavior } from '@/lib/services/pipeline'
 import { rankOpportunities } from '@/lib/services/matching'
 import { describeSaved, extractInfo, hasAnyInfo, reply } from '@/lib/services/chat'
-import { telegramProvider } from '@/lib/notifications/telegram'
+import { emailProvider } from '@/lib/notifications/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,13 +39,12 @@ export async function POST(req: NextRequest) {
     let savedNote = ''
     if (customer && hasAnyInfo(info)) {
       // 고객 식별 정보
-      if (info.name || info.email || info.phone || info.telegramChatId) {
+      if (info.name || info.email || info.phone) {
         await repo.upsertCustomer({
           id: customer.id,
           ...(info.name ? { name: info.name } : {}),
           ...(info.email ? { email: info.email.toLowerCase() } : {}),
           ...(info.phone ? { phone: info.phone } : {}),
-          ...(info.telegramChatId ? { telegram_chat_id: info.telegramChatId } : {}),
         })
       }
 
@@ -79,14 +78,16 @@ export async function POST(req: NextRequest) {
     const pref = customer ? await repo.getPreference(customer.id) : null
     const contact = info.email ?? info.phone ?? null
 
-    const candidates = pref
-      ? rankOpportunities(pref, await repo.listOpportunities({ limit: 200 })).primary.length
-      : null
+    const opportunities = await repo.listOpportunities({ limit: 200 })
+    const candidates = pref ? rankOpportunities(pref, opportunities).primary.length : null
+    // 실제 공고가 실제로 있는지로 답한다. "준비 중"을 고정 문구로 두지 않는다.
+    const officialCount = opportunities.filter(o => !o.is_demo).length
 
     const answer = reply(message, {
       hasPreference: Boolean(pref && pref.preferred_regions.length),
       candidateCount: candidates,
-      telegramConfigured: telegramProvider.isConfigured(),
+      emailConfigured: emailProvider.isConfigured(),
+      officialCount,
       regions: pref?.preferred_regions ?? [],
     })
 

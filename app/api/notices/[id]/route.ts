@@ -1,4 +1,5 @@
 import { propertyById } from '@/lib/crm/store'
+import { findOfficialProperty } from '@/lib/consumer/official'
 import { checkUrgency, buildCandidate } from '@/lib/crm/services/scoring'
 import { buildTasks } from '@/lib/crm/services/scheduling'
 import { resolveSession } from '@/lib/consumer/session'
@@ -9,7 +10,8 @@ export const dynamic = 'force-dynamic'
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await ctx.params
-    const property = propertyById(id)
+    // 예시 공고 → 실제 공고 순으로 찾는다. 둘의 id 는 겹치지 않는다.
+    const property = propertyById(id) ?? (await findOfficialProperty(id))
     if (!property) {
       return Response.json({ error: '공고를 찾을 수 없습니다.' }, { status: 404 })
     }
@@ -41,7 +43,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       candidate,
       schedule,
       budget: candidate?.budget ?? null,
-      dataOrigin: 'SYNTHETIC' as const,
+      dataOrigin: property.dataOrigin,
     })
   } catch (err) {
     return Response.json(

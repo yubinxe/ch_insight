@@ -104,19 +104,31 @@ export default function NoticeDetail({ id }: { id: string }) {
           <div>
             <div className="cs-note">보증금</div>
             <div className="cs-num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--title)', marginTop: 6 }}>
-              {formatMan(property.deposit)}
+              {property.deposit === null ? (
+                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
+              ) : (
+                formatMan(property.deposit)
+              )}
             </div>
           </div>
           <div>
             <div className="cs-note">월 임대료</div>
             <div className="cs-num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--title)', marginTop: 6 }}>
-              {property.monthlyRent.toLocaleString()}만원
+              {property.monthlyRent === null ? (
+                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
+              ) : (
+                `${property.monthlyRent.toLocaleString()}만원`
+              )}
             </div>
           </div>
           <div>
             <div className="cs-note">전용면적</div>
             <div className="cs-num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--title)', marginTop: 6 }}>
-              {property.area}㎡
+              {property.area === null ? (
+                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
+              ) : (
+                `${property.area}㎡`
+              )}
             </div>
           </div>
           <div>

@@ -128,7 +128,18 @@ export default function MatchesView() {
                       <td style={{ minWidth: 170 }}>
                         <div style={{ fontWeight: 550 }}>{p?.name ?? m.propertyId}</div>
                         <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-                          {p ? `${p.region} · ${p.area}㎡ · ${won(p.deposit)}/${p.monthlyRent}만 · ~${shortDate(p.applicationEnd)}` : ''}
+                          {p
+                            ? [
+                                p.region,
+                                p.area === null ? null : `${p.area}㎡`,
+                                p.deposit === null && p.monthlyRent === null
+                                  ? '임대조건 미공개'
+                                  : `${p.deposit === null ? '-' : won(p.deposit)}/${p.monthlyRent === null ? '-' : p.monthlyRent + '만'}`,
+                                `~${shortDate(p.applicationEnd)}`,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')
+                            : ''}
                         </div>
                       </td>
                       <td style={{ maxWidth: 420, fontSize: 13, lineHeight: 1.55 }}>

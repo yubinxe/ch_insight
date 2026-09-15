@@ -1,7 +1,7 @@
 import { isAdminRequest } from '@/lib/admin/auth'
 import * as repo from '@/lib/db/repo'
 import { isApplyhomeConfigured } from '@/lib/adapters/applyhome'
-import { telegramProvider } from '@/lib/notifications/telegram'
+import { emailProvider } from '@/lib/notifications/email'
 import { MATCH_CONFIG } from '@/lib/services/matching'
 import { STAGE_LABEL } from '@/lib/services/lead-scoring'
 
@@ -43,7 +43,7 @@ export async function GET() {
       storage: repo.storageMode(),
       integrations: {
         applyhome: isApplyhomeConfigured(),
-        telegram: telegramProvider.isConfigured(),
+        email: emailProvider.isConfigured(),
       },
       config: { notifyThreshold: MATCH_CONFIG.notifyThreshold },
       metrics: {

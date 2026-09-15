@@ -6,7 +6,8 @@ import { FIT_WEIGHTS } from '@/lib/crm/services/scoring'
 /** 선호 적합도 세부 점수 */
 export interface FitBreakdown {
   regionScore: number
-  areaScore: number
+  /** 공고에 면적이 없으면 null — 0% 막대로 그리지 않는다 */
+  areaScore: number | null
   housingTypeScore: number
 }
 
@@ -103,6 +104,21 @@ export function ScoreBars({ breakdown }: { breakdown: FitBreakdown }) {
     <div className="score-bars">
       {BAR_ROWS.map(row => {
         const v = breakdown[row.key]
+        // 값이 없는 항목은 막대를 비우고 가중치가 재분배됐음을 적는다
+        if (v === null) {
+          return (
+            <div key={row.key} className="score-bar__row">
+              <span className="score-bar__label">
+                {row.label}
+                <span className="score-bar__weight">재분배</span>
+              </span>
+              <span className="score-bar__track" />
+              <span className="score-bar__val muted" style={{ fontSize: 12 }}>
+                미공개
+              </span>
+            </div>
+          )
+        }
         return (
           <div key={row.key} className="score-bar__row">
             <span className="score-bar__label">

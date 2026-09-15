@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { UrgencyInfo } from '@/lib/crm/services/scoring'
 import type { Property } from '@/lib/crm/types'
-import { HOUSING_TYPES } from '@/lib/crm/types'
 import NoticeCard from './NoticeCard'
 
 interface Row {
@@ -12,13 +11,14 @@ interface Row {
   urgency: UrgencyInfo
 }
 
-const REGIONS = ['전체', '관악구', '동작구', '마포구', '영등포구', '성동구', '송파구', '서초구', '강남구']
-
 export default function NoticeBrowser() {
   const [region, setRegion] = useState('전체')
   const [type, setType] = useState('전체')
   const [nonce, setNonce] = useState(0)
   const [result, setResult] = useState<{ key: string; rows: Row[]; error: string | null } | null>(null)
+  // 칩 목록은 응답에서 온다. 고정 목록을 두면 실제 공고 지역·유형을 고를 수 없다.
+  const [types, setTypes] = useState<string[]>([])
+  const [regions, setRegions] = useState<string[]>([])
 
   const key = `${region}|${type}|${nonce}`
   const loading = result?.key !== key
@@ -33,8 +33,12 @@ export default function NoticeBrowser() {
 
     fetch(`/api/notices?${params}`, { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('공고를 불러오지 못했어요.'))))
-      .then((json: { notices: Row[] }) => {
-        if (alive) setResult({ key, rows: json.notices, error: null })
+      .then((json: { notices: Row[]; housingTypes?: string[]; regions?: string[] }) => {
+        if (!alive) return
+        setResult({ key, rows: json.notices, error: null })
+        // 지역을 바꿔도 유형 칩이 사라지지 않게 지금까지 본 값을 합친다
+        if (json.housingTypes?.length) setTypes(prev => [...new Set([...prev, ...json.housingTypes!])])
+        if (json.regions?.length) setRegions(json.regions)
       })
       .catch((err: unknown) => {
         if (alive) {
@@ -71,7 +75,7 @@ export default function NoticeBrowser() {
       </p>
 
       <div className="cs-badge-row" style={{ margin: '26px 0 10px' }}>
-        {REGIONS.map(r => (
+        {['전체', ...regions].map(r => (
           <button
             key={r}
             type="button"
@@ -85,7 +89,7 @@ export default function NoticeBrowser() {
         ))}
       </div>
       <div className="cs-badge-row" style={{ marginBottom: 30 }}>
-        {['전체', ...HOUSING_TYPES].map(t => (
+        {['전체', ...types].map(t => (
           <button
             key={t}
             type="button"
@@ -126,10 +130,19 @@ export default function NoticeBrowser() {
               property={row.property}
               candidate={{
                 propertyId: row.property.id,
-                fit: { regionScore: 0, areaScore: 0, housingTypeScore: 0, preferenceScore: 0 },
-                budget: { depositOver: 0, rentOver: 0, depositRoom: 0, rentRoom: 0, withinBudget: true },
+                fit: { regionScore: 0, areaScore: null, housingTypeScore: 0, preferenceScore: 0 },
+                // 조건 없이 둘러보는 화면이라 예산을 비교하지 않았다는 뜻이다
+                budget: {
+                  depositOver: 0,
+                  rentOver: 0,
+                  depositRoom: 0,
+                  rentRoom: 0,
+                  withinBudget: true,
+                  unverified: [],
+                },
                 urgency: row.urgency,
                 eligibility: 'UNKNOWN',
+                confidence: 'PARTIAL' as const,
                 reasons: [],
                 cautions: ['소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다'],
                 tier: 'PRIMARY',

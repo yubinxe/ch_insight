@@ -128,8 +128,8 @@ create table if not exists notifications (
   customer_id     uuid not null references customers(id) on delete cascade,
   opportunity_id  uuid references opportunities(id) on delete set null,
   match_id        uuid references matches(id) on delete set null,
-  channel         text not null default 'TELEGRAM'
-                    check (channel in ('TELEGRAM','KAKAO','EMAIL','PUSH','RCS')),
+  channel         text not null default 'EMAIL'
+                    check (channel in ('EMAIL','TELEGRAM','KAKAO','PUSH','RCS')),
   -- PREVIEW: 자격증명이 없어 발송하지 않고 원문만 보관한 상태
   status          text not null default 'PREVIEW'
                     check (status in ('PREVIEW','QUEUED','SENT','FAILED')),

@@ -52,12 +52,22 @@ function statusOf(start: string | null, end: string | null, today = new Date()):
   return 'OPEN'
 }
 
-/** "서울특별시 관악구 ..." → "관악구" */
+/**
+ * "서울특별시 관악구 ..." → "관악구", "충청남도 천안시 서북구 ..." → "서북구".
+ *
+ * 주소 뒤쪽에는 '회천지구'·'평택고덕국제화계획지구' 같은 지구명이 붙는데
+ * 이것도 '구' 로 끝나서 지역으로 잘못 잡힌다. 지역이 아닌 말은 먼저 걸러낸다.
+ */
+const NOT_A_REGION = /(지구|단지|택지|블록|블럭|권역|지역)$/
+
 function regionFromAddress(address: string | undefined, fallback: string | undefined): string {
   if (address) {
-    const m = address.match(/([가-힣]+[시군구])(?:\s|$)/g)
-    if (m && m.length >= 2) return m[1].trim()
-    if (m && m.length === 1) return m[0].trim()
+    const m = (address.match(/([가-힣]+[시군구])(?:\s|$)/g) ?? [])
+      .map(t => t.trim())
+      .filter(t => t.length >= 2 && !NOT_A_REGION.test(t))
+    // 광역시·도 다음에 오는 기초자치단체를 쓴다 (없으면 유일한 값)
+    if (m.length >= 2) return m[1]
+    if (m.length === 1) return m[0]
   }
   return (fallback ?? '').trim()
 }

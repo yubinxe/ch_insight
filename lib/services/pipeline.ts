@@ -1,7 +1,7 @@
 import * as repo from '@/lib/db/repo'
 import { MATCH_CONFIG, formatMan, scoreMatch, daysUntil } from './matching'
 import { applyBehavior } from './lead-scoring'
-import { telegramProvider } from '@/lib/notifications/telegram'
+import { emailProvider } from '@/lib/notifications/email'
 import type { NotificationProvider } from '@/lib/notifications/provider'
 import type {
   BehaviorEventType,
@@ -19,7 +19,12 @@ import type {
  * 화면 컴포넌트에 비즈니스 로직을 넣지 않기 위해 전부 여기에 둔다.
  */
 
-const provider: NotificationProvider = telegramProvider
+/**
+ * 기본 알림 채널은 이메일이다.
+ * 텔레그램은 사용자가 chat id 를 직접 찾아 넣어야 해서 접근성이 떨어진다.
+ * 다른 채널로 바꾸려면 이 한 줄만 교체한다.
+ */
+const provider: NotificationProvider = emailProvider
 
 function baseUrl() {
   return (
@@ -149,7 +154,8 @@ export async function runMatchingForEvent(
     })
 
     const outcome = await provider.send({
-      to: customer.telegram_chat_id,
+      // 이메일은 가입 시 이미 받으므로 추가 입력 단계가 없다
+      to: customer.email,
       title: '집캐치 맞춤 주거기회',
       body: message,
       // 상세 페이지로 직접 보내지 않고 추적 경로를 거친다

@@ -59,8 +59,12 @@ export function buildNotificationPayload(
     '등록하신 조건에 부합하는 물건이 확인되어 안내드립니다.',
     '',
     `■ ${property.name}`,
-    `   ${property.region} · ${property.housingType} · 전용 ${property.area}㎡`,
-    `   보증금 ${formatMoney(property.deposit)} / 월 임대료 ${property.monthlyRent}만원`,
+    `   ${property.region} · ${property.housingType}${property.area === null ? '' : ` · 전용 ${property.area}㎡`}`,
+    property.deposit === null && property.monthlyRent === null
+      ? '   임대조건: 모집공고문 확인 필요'
+      : `   보증금 ${property.deposit === null ? '공고문 확인' : formatMoney(property.deposit)} / 월 임대료 ${
+          property.monthlyRent === null ? '공고문 확인' : `${property.monthlyRent}만원`
+        }`,
     '',
     `■ 희망조건 일치도 ${match.preferenceScore}점 (100점 만점)`,
     ...match.reasons.map(r => `   · ${r}`),

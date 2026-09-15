@@ -129,9 +129,9 @@ export default function PropertiesView() {
                     </td>
                     <td className="muted">{p.housingType}</td>
                     <td>{p.region}</td>
-                    <td className="num tnums">{p.area}㎡</td>
-                    <td className="num tnums">{won(p.deposit)}</td>
-                    <td className="num tnums">{p.monthlyRent}만</td>
+                    <td className="num tnums">{p.area === null ? <span className="muted">–</span> : `${p.area}㎡`}</td>
+                    <td className="num tnums">{p.deposit === null ? <span className="muted">–</span> : won(p.deposit)}</td>
+                    <td className="num tnums">{p.monthlyRent === null ? <span className="muted">–</span> : `${p.monthlyRent}만`}</td>
                     <td className="num tnums">{p.supplyCount}</td>
                     <td className="num">
                       {p.vacancyCount > 0 ? <Chip tone="hot" dot>{p.vacancyCount}</Chip> : <span className="muted">0</span>}

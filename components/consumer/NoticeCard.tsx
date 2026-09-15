@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import type { Candidate } from '@/lib/crm/services/scoring'
 import type { Property } from '@/lib/crm/types'
-import { formatMan } from '@/lib/crm/services/scoring'
+import { formatManOr } from '@/lib/crm/services/scoring'
 import SaveButton from './SaveButton'
 
 export function statusBadge(urgency: Candidate['urgency']) {
@@ -52,7 +52,11 @@ export default function NoticeCard({
       )}
 
       <div className="cs-notice__top">
-        {property.dataOrigin === 'SYNTHETIC' && <span className="cs-sample">예시 공고</span>}
+        {property.dataOrigin === 'SYNTHETIC' ? (
+          <span className="cs-sample">예시 공고</span>
+        ) : (
+          <span className="cs-official">공식 공고</span>
+        )}
         <span className="cs-badge cs-badge--brand">{property.housingType}</span>
         {badge && (
           <span className={`cs-badge ${badge.cls}`}>
@@ -67,12 +71,29 @@ export default function NoticeCard({
 
       <h3 className="cs-notice__name">{property.name}</h3>
       <p className="cs-notice__where">
-        {property.district} {property.region} · 전용 {property.area}㎡
+        {/* 광역이 없거나 지역과 같으면 한 번만 적는다 */}
+        {property.district && property.district !== property.region
+          ? `${property.district} ${property.region}`
+          : property.region}
+        {property.area !== null && <> · 전용 {property.area}㎡</>}
       </p>
 
       <div className="cs-notice__price">
-        <div className="cs-notice__deposit cs-num">보증금 {formatMan(property.deposit)}</div>
-        <div className="cs-notice__rent cs-num">월 임대료 {property.monthlyRent.toLocaleString()}만원</div>
+        {property.deposit === null && property.monthlyRent === null ? (
+          // 공고 목록에 금액이 없는 경우. 0 원으로 채우지 않는다.
+          // 분양·임대를 함께 다루므로 "임대조건" 으로 좁혀 쓰지 않는다.
+          <div className="cs-notice__unknown">공급금액·면적은 모집공고문에서 확인하세요</div>
+        ) : (
+          <>
+            <div className="cs-notice__deposit cs-num">보증금 {formatManOr(property.deposit)}</div>
+            <div className="cs-notice__rent cs-num">
+              월 임대료{' '}
+              {property.monthlyRent === null
+                ? '공고문 확인'
+                : `${property.monthlyRent.toLocaleString()}만원`}
+            </div>
+          </>
+        )}
       </div>
 
       {showReasons && candidate && candidate.reasons.length > 0 && (

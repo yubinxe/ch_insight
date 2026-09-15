@@ -161,9 +161,9 @@ export default function ApplicationsView() {
               <KeyValues
                 items={[
                   { k: '지역', v: focusProperty.region },
-                  { k: '전용면적', v: `${focusProperty.area}㎡` },
-                  { k: '보증금', v: `${won(focusProperty.deposit)}원` },
-                  { k: '월 임대료', v: `${focusProperty.monthlyRent}만원` },
+                  { k: '전용면적', v: focusProperty.area === null ? '공고 미공개' : `${focusProperty.area}㎡` },
+                  { k: '보증금', v: focusProperty.deposit === null ? '공고 미공개' : `${won(focusProperty.deposit)}원` },
+                  { k: '월 임대료', v: focusProperty.monthlyRent === null ? '공고 미공개' : `${focusProperty.monthlyRent}만원` },
                   { k: '접수 마감', v: focusProperty.applicationEnd ?? '미정' },
                   { k: '결과 발표', v: focusProperty.resultDate ?? '미정' },
                 ]}

@@ -21,7 +21,6 @@ import {
 } from './primitives'
 import { clockTime, ddayLabel, shortDate, useSnapshot, won } from './useSnapshot'
 import { resetDemo, triggerVacancy, type TriggerResponse } from '@/lib/crm/client'
-import { STAGE_LABEL } from '@/lib/crm/types'
 
 /** Event Stream 라벨은 한국어 우선 */
 const KIND_LABEL: Record<string, string> = {
@@ -408,10 +407,10 @@ export default function DashboardView() {
 
             <KeyValues
               items={[
-                { k: '전용면적', v: `${result.property.area}㎡` },
+                { k: '전용면적', v: result.property.area === null ? '공고 미공개' : `${result.property.area}㎡` },
                 { k: '공급세대', v: `${result.property.supplyCount}세대` },
-                { k: '보증금', v: `${won(result.property.deposit)}원` },
-                { k: '월 임대료', v: `${result.property.monthlyRent}만원` },
+                { k: '보증금', v: result.property.deposit === null ? '공고 미공개' : `${won(result.property.deposit)}원` },
+                { k: '월 임대료', v: result.property.monthlyRent === null ? '공고 미공개' : `${result.property.monthlyRent}만원` },
                 {
                   k: '접수 기간',
                   v: `${shortDate(result.property.applicationStart)} ~ ${shortDate(result.property.applicationEnd)}`,

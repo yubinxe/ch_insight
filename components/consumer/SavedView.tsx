@@ -16,10 +16,19 @@ interface Row {
 function neutral(propertyId: string, urgency: UrgencyInfo) {
   return {
     propertyId,
-    fit: { regionScore: 0, areaScore: 0, housingTypeScore: 0, preferenceScore: 0 },
-    budget: { depositOver: 0, rentOver: 0, depositRoom: 0, rentRoom: 0, withinBudget: true },
+    fit: { regionScore: 0, areaScore: null, housingTypeScore: 0, preferenceScore: 0 },
+    // 저장 목록은 판정 화면이 아니다. 예산을 비교하지 않았다는 뜻으로 둔다.
+    budget: {
+      depositOver: 0,
+      rentOver: 0,
+      depositRoom: 0,
+      rentRoom: 0,
+      withinBudget: true,
+      unverified: [] as ('DEPOSIT' | 'RENT')[],
+    },
     urgency,
     eligibility: 'UNKNOWN' as const,
+    confidence: 'PARTIAL' as const,
     reasons: [],
     cautions: ['소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다'],
     tier: 'PRIMARY' as const,

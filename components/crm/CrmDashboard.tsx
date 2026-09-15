@@ -6,7 +6,7 @@ import { Chip, DemoFlag, Empty, ErrorBox, PageHead, Person, Spinner, Stat, Table
 
 interface Snapshot {
   storage: 'supabase' | 'memory'
-  integrations: { applyhome: boolean; telegram: boolean }
+  integrations: { applyhome: boolean; email: boolean }
   config: { notifyThreshold: number }
   metrics: Record<string, number | null>
   events: {
@@ -167,14 +167,27 @@ export default function CrmDashboard() {
               className="crm-btn"
               disabled={busy !== null}
               onClick={() =>
-                run('sync', '/api/admin/sync', j =>
-                  j.ok
-                    ? `청약홈 동기화 — 신규 ${j.inserted} · 갱신 ${j.updated}`
-                    : `청약홈 연동 실패: ${j.reason}`,
-                )
+                run('sync', '/api/admin/sync', j => {
+                  // 출처별로 따로 보고한다. 한쪽이 실패해도 다른 쪽 결과를 숨기지 않는다.
+                  const sources = (j.sources ?? []) as {
+                    label: string
+                    ok: boolean
+                    reason: string | null
+                    inserted: number
+                    updated: number
+                  }[]
+                  if (!sources.length) return `공고 동기화 — 신규 ${j.inserted} · 갱신 ${j.updated}`
+                  return sources
+                    .map(s =>
+                      s.ok
+                        ? `${s.label} 신규 ${s.inserted} · 갱신 ${s.updated}`
+                        : `${s.label} 실패: ${s.reason}`,
+                    )
+                    .join(' / ')
+                })
               }
             >
-              {busy === 'sync' ? <Spinner /> : '청약홈 동기화'}
+              {busy === 'sync' ? <Spinner /> : '공고 동기화 (청약홈 · LH)'}
             </button>
             <button
               className="crm-btn crm-btn--accent crm-btn--lg"
@@ -201,8 +214,8 @@ export default function CrmDashboard() {
         <Chip tone={data.integrations.applyhome ? 'pos' : 'default'} dot>
           청약홈 {data.integrations.applyhome ? '연동됨' : 'API 키 없음'}
         </Chip>
-        <Chip tone={data.integrations.telegram ? 'pos' : 'default'} dot>
-          텔레그램 {data.integrations.telegram ? '연동됨' : '토큰 없음 · 초안만 저장'}
+        <Chip tone={data.integrations.email ? 'pos' : 'default'} dot>
+          이메일 발송 {data.integrations.email ? '연동됨' : '키 없음 · 초안만 저장'}
         </Chip>
         <Chip>알림 임계치 {data.config.notifyThreshold}점</Chip>
       </div>
@@ -327,9 +340,9 @@ export default function CrmDashboard() {
             <CardHead
               title="최근 알림"
               sub={
-                data.integrations.telegram
-                  ? '텔레그램 연동됨'
-                  : '텔레그램 토큰이 없어 발송하지 않고 원문만 보관합니다'
+                data.integrations.email
+                  ? '이메일 발송 연동됨'
+                  : '이메일 발송 키가 없어 보내지 않고 원문만 보관합니다'
               }
               right={
                 data.latestNotification ? (

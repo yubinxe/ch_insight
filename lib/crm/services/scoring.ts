@@ -37,14 +37,21 @@ export interface BudgetCheck {
   /** 상한 이내 여유액(만원). 초과 시 0 */
   depositRoom: number
   rentRoom: number
+  /**
+   * 확인된 초과가 없다는 뜻이며 "예산에 맞는다"는 보장이 아니다.
+   * 공고에 임대조건이 없으면 unverified 에 남는다. 화면에는 반드시 확인 필요로 적는다.
+   */
   withinBudget: boolean
+  /** 공고에 금액이 없어 비교하지 못한 항목 */
+  unverified: ('DEPOSIT' | 'RENT')[]
 }
 
 export interface PreferenceFit {
   regionScore: number
-  areaScore: number
+  /** 공고에 면적이 없으면 null. 0 으로 두면 좁은 집으로 오인된다 */
+  areaScore: number | null
   housingTypeScore: number
-  /** 지역·면적·유형만 반영한 0~100 */
+  /** 지역·면적·유형만 반영한 0~100. 면적을 모르면 그 가중치를 나머지에 재분배한다 */
   preferenceScore: number
 }
 
@@ -58,6 +65,14 @@ export interface UrgencyInfo {
 
 export type CandidateTier = 'PRIMARY' | 'RELAXED'
 
+/**
+ * 판정에 쓴 정보가 충분했는지.
+ *
+ * PARTIAL 은 "조건에 안 맞는다"가 아니라 "공고가 값을 주지 않아 비교하지 못했다"는 뜻이다.
+ * 적합도 점수만으로 줄을 세우면, 아무것도 확인하지 못한 공고가 전부 확인된 공고를 이긴다.
+ */
+export type CandidateConfidence = 'VERIFIED' | 'PARTIAL'
+
 export interface Candidate {
   propertyId: string
   fit: PreferenceFit
@@ -69,6 +84,8 @@ export interface Candidate {
   /** 확인이 필요한 사항 */
   cautions: string[]
   tier: CandidateTier
+  /** 예산·면적을 실제로 비교했는지. PARTIAL 은 확인 필요로 표시한다 */
+  confidence: CandidateConfidence
   /** 기본 후보에서 제외된 이유 (RELAXED 일 때만) */
   excludedBy: ('DEPOSIT' | 'RENT' | 'CLOSED')[]
 }
@@ -87,6 +104,45 @@ const NEARBY: Record<string, string[]> = {
   서대문구: ['마포구', '은평구'],
 }
 
+/**
+ * 서울 자치구 → 광역.
+ *
+ * LH 공고는 지역본부(광역) 단위로만 지역을 준다. "서울" 공고와 "관악구" 희망은
+ * 문자열로는 안 맞지만 실제로는 관련이 있다. 다만 같은 지역이라고 단정하지 않고
+ * 부분 점수만 주고 "세부 지역은 공고문 확인"을 남긴다.
+ *
+ * 광역시의 '남구·북구' 등은 부산·대구·울산·광주·인천에 중복 존재해 되짚을 수 없으므로
+ * 서울만 다룬다. 확실한 것만 넣는다.
+ */
+const PROVINCE_OF: Record<string, string> = Object.fromEntries(
+  [
+    '강남구','강동구','강북구','강서구','관악구','광진구','구로구','금천구','노원구','도봉구',
+    '동대문구','동작구','마포구','서대문구','서초구','성동구','성북구','송파구','양천구','영등포구',
+    '용산구','은평구','종로구','중구','중랑구',
+  ].map(gu => [gu, '서울']),
+)
+
+/** 전국 단위 공고 — 지역으로 걸러내면 안 되지만 "내 동네"라고 말할 수도 없다 */
+const NATIONWIDE = '전국'
+
+/** 희망지역과 공고 지역이 같은 광역에 속하는가 (어느 쪽이 광역이든) */
+function sameProvince(pref: string, region: string): string | null {
+  if (PROVINCE_OF[pref] === region) return region
+  if (PROVINCE_OF[region] === pref) return pref
+  return null
+}
+
+/**
+ * 후보 목록에 넣을 만한 지역인가.
+ * 정확히 같거나, 인접 생활권이거나, 같은 광역이면 통과시킨다.
+ */
+export function regionRelated(prefs: string[], region: string): boolean {
+  if (region === NATIONWIDE) return true
+  if (prefs.includes(region)) return true
+  if (prefs.some(r => (NEARBY[r] ?? []).includes(region))) return true
+  return prefs.some(r => sameProvince(r, region) !== null)
+}
+
 /** 달력 기준 남은 일수 (자정~자정). 시:분에 따라 값이 흔들리지 않게 한다. */
 export function daysUntil(dateStr: string | null, now = new Date()) {
   if (!dateStr) return null
@@ -94,6 +150,19 @@ export function daysUntil(dateStr: string | null, now = new Date()) {
   const target = Date.parse(`${dateStr}T00:00:00+09:00`)
   if (!Number.isFinite(target)) return null
   return Math.round((target - Date.parse(`${today}T00:00:00+09:00`)) / 86400000)
+}
+
+/**
+ * 값이 없으면 금액을 만들지 않고 "공고문 확인" 으로 적는다.
+ * 0 원으로 표시하면 무료 임대처럼 읽힌다.
+ */
+export function formatManOr(man: number | null, fallback = '공고문 확인') {
+  return man === null ? fallback : formatMan(man)
+}
+
+/** 면적도 같은 원칙 */
+export function formatAreaOr(area: number | null, fallback = '공고문 확인') {
+  return area === null ? fallback : `${area}㎡`
 }
 
 export function formatMan(man: number) {
@@ -111,6 +180,12 @@ function regionFit(customer: SearchConditions, property: Property) {
   if (prefs.includes(property.region)) return { score: 85, kind: 'LISTED' as const }
   const near = prefs.find(r => (NEARBY[r] ?? []).includes(property.region))
   if (near) return { score: 50, kind: 'NEARBY' as const, via: near }
+  if (property.region === NATIONWIDE) return { score: 40, kind: 'NATIONWIDE' as const }
+  // 광역 단위 공고 — 관련은 있지만 같은 동네라고 말할 수 없다
+  for (const r of prefs) {
+    const province = sameProvince(r, property.region)
+    if (province) return { score: 45, kind: 'PROVINCE' as const, via: province }
+  }
   return { score: 0, kind: 'OUTSIDE' as const }
 }
 
@@ -119,6 +194,8 @@ function regionFit(customer: SearchConditions, property: Property) {
  * 점수 구간으로 넓다/좁다를 역추정하지 않고 실제 ㎡ 차이를 그대로 쓴다.
  */
 function areaFit(customer: SearchConditions, property: Property) {
+  // 공고가 면적을 주지 않으면 비교하지 않는다. 0 점을 주면 "좁다"고 단정하는 셈이다.
+  if (property.area === null) return { score: null, diff: null }
   const diff = property.area - (customer.minArea ?? 0)
   if (diff >= 0) return { score: 100, diff }
   if (diff >= -3) return { score: 60, diff }
@@ -129,19 +206,40 @@ function areaFit(customer: SearchConditions, property: Property) {
 function housingTypeFit(customer: SearchConditions, property: Property) {
   if (!customer.preferredHousingTypes.length) return { score: 100, kind: 'UNKNOWN' as const }
   if (customer.preferredHousingTypes[0] === property.housingType) return { score: 100, kind: 'FIRST' as const }
-  if (customer.preferredHousingTypes.includes(property.housingType)) return { score: 85, kind: 'LISTED' as const }
+  // 공고 표기는 자유 문자열이므로 선택지 목록과 문자열로 비교한다
+  if ((customer.preferredHousingTypes as string[]).includes(property.housingType)) {
+    return { score: 85, kind: 'LISTED' as const }
+  }
   return { score: 30, kind: 'OTHER' as const }
 }
 
 export function checkBudget(customer: SearchConditions, property: Property): BudgetCheck {
-  const depositOver = customer.maxDeposit === null ? 0 : Math.max(0, property.deposit - customer.maxDeposit)
-  const rentOver = customer.maxMonthlyRent === null ? 0 : Math.max(0, property.monthlyRent - customer.maxMonthlyRent)
+  const unverified: BudgetCheck['unverified'] = []
+  if (property.deposit === null) unverified.push('DEPOSIT')
+  if (property.monthlyRent === null) unverified.push('RENT')
+
+  const depositOver =
+    customer.maxDeposit === null || property.deposit === null
+      ? 0
+      : Math.max(0, property.deposit - customer.maxDeposit)
+  const rentOver =
+    customer.maxMonthlyRent === null || property.monthlyRent === null
+      ? 0
+      : Math.max(0, property.monthlyRent - customer.maxMonthlyRent)
+
   return {
     depositOver,
     rentOver,
-    depositRoom: depositOver > 0 || customer.maxDeposit === null ? 0 : customer.maxDeposit - property.deposit,
-    rentRoom: rentOver > 0 || customer.maxMonthlyRent === null ? 0 : customer.maxMonthlyRent - property.monthlyRent,
+    depositRoom:
+      depositOver > 0 || customer.maxDeposit === null || property.deposit === null
+        ? 0
+        : customer.maxDeposit - property.deposit,
+    rentRoom:
+      rentOver > 0 || customer.maxMonthlyRent === null || property.monthlyRent === null
+        ? 0
+        : customer.maxMonthlyRent - property.monthlyRent,
     withinBudget: depositOver === 0 && rentOver === 0,
+    unverified,
   }
 }
 
@@ -165,8 +263,22 @@ export function evaluateFit(customer: SearchConditions, property: Property): Pre
   const r = regionFit(customer, property)
   const a = areaFit(customer, property)
   const h = housingTypeFit(customer, property)
+  // 면적을 모르면 그 가중치(25)를 지역·유형에 비율대로 재분배한다.
+  // 0 점으로 처리하면 정보가 없다는 이유로 점수가 깎인다.
+  const parts: [number, number][] =
+    a.score === null
+      ? [
+          [r.score, FIT_WEIGHTS.region],
+          [h.score, FIT_WEIGHTS.housingType],
+        ]
+      : [
+          [r.score, FIT_WEIGHTS.region],
+          [a.score, FIT_WEIGHTS.area],
+          [h.score, FIT_WEIGHTS.housingType],
+        ]
+  const totalWeight = parts.reduce((sum, [, w]) => sum + w, 0)
   const preferenceScore = Math.round(
-    (r.score * FIT_WEIGHTS.region + a.score * FIT_WEIGHTS.area + h.score * FIT_WEIGHTS.housingType) / 100,
+    parts.reduce((sum, [score, w]) => sum + score * w, 0) / totalWeight,
   )
   return { regionScore: r.score, areaScore: a.score, housingTypeScore: h.score, preferenceScore }
 }
@@ -179,8 +291,17 @@ function buildReasons(customer: SearchConditions, property: Property, budget: Bu
   if (r.kind === 'FIRST') out.push(`희망 1순위 지역 ${property.region}`)
   else if (r.kind === 'LISTED') out.push(`희망지역 ${property.region}`)
   else if (r.kind === 'NEARBY') out.push(`희망하신 ${r.via} 인접 생활권`)
+  else if (r.kind === 'PROVINCE') out.push(`${r.via} 전역 대상 공고 — 세부 지역은 공고문에서 확인하세요`)
+  else if (r.kind === 'NATIONWIDE') out.push('전국 대상 공고 — 대상 지역은 공고문에서 확인하세요')
 
-  if (budget.depositOver === 0 && budget.rentOver === 0 && customer.maxDeposit !== null) {
+  if (
+    budget.unverified.length === 0 &&
+    budget.depositOver === 0 &&
+    budget.rentOver === 0 &&
+    customer.maxDeposit !== null &&
+    property.deposit !== null &&
+    property.monthlyRent !== null
+  ) {
     out.push(
       `보증금 ${formatMan(property.deposit)} · 월 ${property.monthlyRent}만원 — 상한 대비 보증금 ${formatMan(
         budget.depositRoom,
@@ -189,7 +310,7 @@ function buildReasons(customer: SearchConditions, property: Property, budget: Bu
   }
 
   const a = areaFit(customer, property)
-  if (a.diff >= 0 && customer.minArea !== null) {
+  if (a.diff !== null && a.diff >= 0 && customer.minArea !== null) {
     out.push(
       a.diff === 0
         ? `전용 ${property.area}㎡ — 희망 최소 면적과 동일`
@@ -211,7 +332,7 @@ function buildCautions(
 ): string[] {
   const out: string[] = []
 
-  if (budget.depositOver > 0) {
+  if (budget.depositOver > 0 && property.deposit !== null) {
     out.push(
       `보증금 ${formatMan(property.deposit)} — 상한 ${formatMan(customer.maxDeposit ?? 0)}보다 ${formatMan(
         budget.depositOver,
@@ -225,12 +346,22 @@ function buildCautions(
   }
 
   const a = areaFit(customer, property)
-  if (a.diff < 0) {
+  if (a.diff !== null && a.diff < 0) {
     out.push(`전용 ${property.area}㎡ — 희망 최소 ${customer.minArea}㎡보다 ${Math.abs(a.diff)}㎡ 좁음`)
   }
 
   const h = housingTypeFit(customer, property)
   if (h.kind === 'OTHER') out.push(`관심 목록에 없는 유형 (${property.housingType})`)
+
+  // 공고가 임대조건·면적을 주지 않는 경우. 비었다고 예산 이내라고 말하지 않는다.
+  if (budget.unverified.length === 2) {
+    out.push('공급금액이 공고 목록에 없어 예산 충족 여부를 확인하지 못했습니다 — 모집공고문을 확인해 주세요')
+  } else if (budget.unverified.includes('DEPOSIT')) {
+    out.push('보증금이 공고 목록에 없어 예산 충족 여부를 확인하지 못했습니다')
+  } else if (budget.unverified.includes('RENT')) {
+    out.push('월 임대료가 공고 목록에 없어 예산 충족 여부를 확인하지 못했습니다')
+  }
+  if (property.area === null) out.push('전용면적이 공고 목록에 없어 면적 조건을 비교하지 못했습니다')
 
   // 자격 엔진이 없으므로 항상 미확인이다. 미확인을 불충족으로 단정하지 않는다.
   out.push('소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다')
@@ -261,6 +392,7 @@ export function buildCandidate(customer: SearchConditions, property: Property, n
     eligibility: 'UNKNOWN',
     reasons: buildReasons(customer, property, budget),
     cautions: buildCautions(customer, property, budget, urgency),
+    confidence: budget.unverified.length === 0 && property.area !== null ? 'VERIFIED' : 'PARTIAL',
     tier: excludedBy.length === 0 ? 'PRIMARY' : 'RELAXED',
     excludedBy,
   }
@@ -274,16 +406,29 @@ export function compareCandidates(
   a: { property: Property; candidate: Candidate },
   b: { property: Property; candidate: Candidate },
 ): string {
-  const [hi, lo] =
-    a.candidate.fit.preferenceScore >= b.candidate.fit.preferenceScore ? [a, b] : [b, a]
+  // 목록 정렬과 같은 기준으로 고른다. 점수만 보면 "확인 못한 공고가 더 잘 맞는다"고 말하게 된다.
+  const rank = (x: { candidate: Candidate }) =>
+    (x.candidate.confidence === 'VERIFIED' ? 0 : 1000) - x.candidate.fit.preferenceScore
+  const [hi, lo] = rank(a) <= rank(b) ? [a, b] : [b, a]
 
-  const cheaper =
-    hi.property.monthlyRent + hi.property.deposit / 100 < lo.property.monthlyRent + lo.property.deposit / 100
-  const lessCompetitive = hi.property.competitionRate < lo.property.competitionRate
+  // 한쪽이라도 값이 없으면 비교하지 않는다. 없는 값을 0 으로 두면 "더 싸다"가 뒤집힌다.
+  const cost = (p: Property) =>
+    p.monthlyRent === null || p.deposit === null ? null : p.monthlyRent + p.deposit / 100
+  const hiCost = cost(hi.property)
+  const loCost = cost(lo.property)
+  const cheaper = hiCost !== null && loCost !== null && hiCost < loCost
+
+  const lessCompetitive =
+    hi.property.competitionRate !== null &&
+    lo.property.competitionRate !== null &&
+    hi.property.competitionRate < lo.property.competitionRate
 
   const bits: string[] = []
   if (cheaper) bits.push('비용 부담이 낮고')
   if (lessCompetitive) bits.push('직전 공고 경쟁이 덜해')
+  if (hi.candidate.confidence === 'VERIFIED' && lo.candidate.confidence === 'PARTIAL') {
+    bits.push('예산·면적까지 확인돼')
+  }
   const why = bits.length ? bits.join(' ') : '희망 조건에 더 가까워'
 
   return `${lo.property.name}보다 ${hi.property.name}이(가) ${why} 먼저 살펴보시기 좋습니다.`

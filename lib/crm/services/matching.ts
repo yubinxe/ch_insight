@@ -1,5 +1,11 @@
 import type { Customer, Property } from '../types'
-import { buildCandidate, compareCandidates, type Candidate, type SearchConditions } from './scoring'
+import {
+  buildCandidate,
+  compareCandidates,
+  regionRelated,
+  type Candidate,
+  type SearchConditions,
+} from './scoring'
 
 export interface CandidateResult {
   property: Property
@@ -16,6 +22,12 @@ export interface MatchOutcome {
 }
 
 function sortByFit(a: CandidateResult, b: CandidateResult) {
+  // 확인된 후보를 먼저 보여준다.
+  // 금액·면적을 주지 않는 공고는 그 항목의 가중치가 재분배돼 점수가 오히려 높아지는데,
+  // 그대로 줄을 세우면 "아무것도 확인하지 못한 공고"가 1순위가 된다.
+  const known = (c: CandidateResult) => (c.candidate.confidence === 'VERIFIED' ? 0 : 1)
+  if (known(a) !== known(b)) return known(a) - known(b)
+
   if (b.candidate.fit.preferenceScore !== a.candidate.fit.preferenceScore) {
     return b.candidate.fit.preferenceScore - a.candidate.fit.preferenceScore
   }
@@ -45,9 +57,15 @@ export function findCandidatesForCustomer(
 
   const primary = all
     .filter(r => r.candidate.tier === 'PRIMARY')
-    .filter(r => customer.preferredRegions.includes(r.property.region))
-    .filter(r => !customer.preferredHousingTypes.length || customer.preferredHousingTypes.includes(r.property.housingType))
-    .filter(r => customer.minArea === null || r.property.area >= customer.minArea)
+    .filter(r => regionRelated(customer.preferredRegions, r.property.region))
+    .filter(
+      r =>
+        !customer.preferredHousingTypes.length ||
+        (customer.preferredHousingTypes as string[]).includes(r.property.housingType),
+    )
+    // 면적이 공개되지 않은 공고는 조건 불충족으로 단정하지 않는다.
+    // 대신 buildCandidate 가 "면적을 비교하지 못했다"는 주의를 남긴다.
+    .filter(r => customer.minArea === null || r.property.area === null || r.property.area >= customer.minArea)
     // 관심 목록에 없는 유형까지 섞이면 결과가 흐려진다. 최소 적합도를 둔다.
     .filter(r => r.candidate.fit.preferenceScore >= 40)
     .sort(sortByFit)
@@ -55,7 +73,7 @@ export function findCandidatesForCustomer(
 
   const relaxed = all
     .filter(r => r.candidate.tier === 'RELAXED')
-    .filter(r => customer.preferredRegions.includes(r.property.region))
+    .filter(r => regionRelated(customer.preferredRegions, r.property.region))
     .filter(r => !r.candidate.excludedBy.includes('CLOSED'))
     .filter(r => r.candidate.fit.preferenceScore >= 50)
     .sort(sortByOverage)
