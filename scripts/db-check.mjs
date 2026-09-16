@@ -42,9 +42,20 @@ const url = (process.env.SUPABASE_URL ?? '').trim().replace(/\/+$/, '')
 const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim()
 
 if (!url || !key) {
-  console.log('✗ .env.local 에 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 가 없습니다.')
-  console.log('  docs/setup/supabase.md 의 1~3단계를 먼저 진행하세요.')
-  console.log('  (지금 상태로도 앱은 뜹니다 — 메모리에 저장되고 서버를 끄면 사라집니다.)')
+  // 무엇이 빠졌는지 정확히 말한다. 둘 다 없다고 하면 엉뚱한 곳을 보게 된다.
+  if (!url) console.log('✗ .env.local 에 SUPABASE_URL 이 없습니다.')
+  if (!key) {
+    console.log('✗ .env.local 에 SUPABASE_SERVICE_ROLE_KEY 가 없습니다.')
+    if (url) {
+      const ref = url.replace(/^https?:\/\//, '').split('.')[0]
+      console.log(`  https://supabase.com/dashboard/project/${ref}/settings/api-keys`)
+      console.log('  → service_role 키를 복사해 .env.local 의 SUPABASE_SERVICE_ROLE_KEY= 뒤에 붙여넣으세요.')
+      console.log('  (anon 키가 아닙니다. 이 키는 서버에서만 쓰며 브라우저로 내보내지 않습니다.)')
+    }
+  }
+  console.log('')
+  console.log('자세한 절차: docs/setup/supabase.md')
+  console.log('(지금 상태로도 앱은 뜹니다 — 메모리에 저장되고 서버를 끄면 사라집니다.)')
   process.exit(1)
 }
 

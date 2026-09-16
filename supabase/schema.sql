@@ -205,8 +205,11 @@ create table if not exists inquiries (
 );
 
 -- ── updated_at 자동 갱신 ────────────────────────────────────
+-- search_path 를 비워 스키마 하이재킹을 막는다 (pg_catalog 은 항상 잡힌다)
 create or replace function touch_updated_at() returns trigger
-language plpgsql as $$
+language plpgsql
+set search_path = ''
+as $$
 begin
   new.updated_at = now();
   return new;
