@@ -27,7 +27,7 @@ export function renderEmailHtml(payload: NotificationPayload): string {
   const button = payload.linkUrl
     ? `<div style="margin-top:28px">
          <a href="${payload.linkUrl}"
-            style="display:inline-block;background:#3157D5;color:#ffffff;text-decoration:none;
+            style="display:inline-block;background:#14110C;color:#ffffff;text-decoration:none;
                    padding:14px 26px;border-radius:12px;font-weight:600;font-size:16px">
            ${escape(payload.linkLabel ?? '자세히 보기')}
          </a>
@@ -36,16 +36,16 @@ export function renderEmailHtml(payload: NotificationPayload): string {
 
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:24px;background:#F6F8FC;
+<body style="margin:0;padding:24px;background:#F4F1EB;
              font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-             color:#344054;line-height:1.65;font-size:16px">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #E4E7EC;
+             color:#3B352C;line-height:1.65;font-size:16px">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #E2DBCF;
               border-radius:20px;padding:32px">
-    <div style="font-size:20px;font-weight:700;color:#182230;margin-bottom:20px">집캐치</div>
+    <div style="font-size:20px;font-weight:700;color:#14110C;margin-bottom:20px">집캐치</div>
     ${body}
     ${button}
-    <div style="margin-top:32px;padding-top:20px;border-top:1px solid #E4E7EC;
-                font-size:13px;color:#667085;line-height:1.6">
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid #E2DBCF;
+                font-size:13px;color:#6F6859;line-height:1.6">
       이 메일은 알림 수신에 동의하신 주소로 발송됩니다.
       관심공고 화면에서 언제든 수신을 해제하실 수 있습니다.
     </div>

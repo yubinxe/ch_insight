@@ -30,8 +30,8 @@
 
   /* 엘리베이션은 최소로. 깊이보다 괘선으로 구조를 잡는다 */
   --e1: none;
-  --e2: 0 1px 2px rgba(16, 30, 54, 0.06);
-  --e3: 0 2px 4px rgba(16, 30, 54, 0.06), 0 16px 40px -18px rgba(16, 30, 54, 0.26);
+  --e2: 0 1px 2px rgba(20, 17, 12, 0.06);
+  --e3: 0 2px 4px rgba(20, 17, 12, 0.06), 0 16px 40px -18px rgba(20, 17, 12, 0.26);
 
   --maxw: 1280px;
 }
@@ -39,17 +39,21 @@
 /* 기관 신뢰감 팔레트 — 소비자 SaaS 블루 대신 짙은 남색 */
 :root,
 [data-theme='light'] {
-  --accent: #14508c;
-  --accent-press: #0e3c6b;
-  --accent-soft: rgba(20, 80, 140, 0.08);
-  --hot: #c0322b;
-  --hot-soft: rgba(192, 50, 43, 0.09);
-  --pos: #10714a;
-  --pos-soft: rgba(16, 113, 74, 0.09);
-  --warn: #9a6100;
-  --warn-soft: rgba(154, 97, 0, 0.1);
-  --rule: rgba(16, 30, 54, 0.14);
-  --rule-strong: rgba(16, 30, 54, 0.34);
+  /* 소비자 화면과 같은 먹·주묵 체계. 운영이라고 다른 팔레트를 쓰지 않는다 */
+  --accent: #14110C;
+  --accent-press: #000000;
+  /* 주 버튼 글자색. 다크에서 accent 가 밝아지므로 토큰으로 뒤집는다 */
+  --accent-on: #FFFFFF;
+  --pos-on: #FFFFFF;
+  --accent-soft: rgba(20, 17, 12, 0.06);
+  --hot: #A83A20;
+  --hot-soft: rgba(168, 58, 32, 0.09);
+  --pos: #3D5F43;
+  --pos-soft: rgba(61, 95, 67, 0.10);
+  --warn: #7D6320;
+  --warn-soft: rgba(125, 99, 32, 0.10);
+  --rule: rgba(20, 17, 12, 0.14);
+  --rule-strong: rgba(20, 17, 12, 0.34);
   --r-sm: 4px;
   --r-md: 6px;
   --r-lg: 8px;
@@ -58,15 +62,17 @@
 }
 
 [data-theme='dark'] {
-  --accent: #6ea8de;
-  --accent-press: #8dbdea;
-  --accent-soft: rgba(110, 168, 222, 0.14);
-  --hot: #e8736b;
-  --hot-soft: rgba(232, 115, 107, 0.16);
-  --pos: #4cbf8b;
-  --pos-soft: rgba(76, 191, 139, 0.16);
-  --warn: #d99a3c;
-  --warn-soft: rgba(217, 154, 60, 0.16);
+  --accent: #E7E1D6;
+  --accent-press: #FFFFFF;
+  --accent-on: #14110C;
+  --pos-on: #14110C;
+  --accent-soft: rgba(231, 225, 214, 0.12);
+  --hot: #E0785C;
+  --hot-soft: rgba(224, 120, 92, 0.16);
+  --pos: #7FB487;
+  --pos-soft: rgba(127, 180, 135, 0.16);
+  --warn: #D8B25C;
+  --warn-soft: rgba(216, 178, 92, 0.16);
   --rule: rgba(255, 255, 255, 0.14);
   --rule-strong: rgba(255, 255, 255, 0.3);
   --e1: none;
@@ -219,7 +225,7 @@
   padding: 8px 15px;
   border-radius: 3px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-on);
   font-size: var(--fs-sm);
   font-weight: 620;
   text-decoration: none;
@@ -415,7 +421,7 @@
   height: 20px;
   border-radius: 2px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-on);
   font-size: 11.5px;
   font-weight: 720;
   display: grid;
@@ -808,7 +814,7 @@
 }
 .crm-btn--accent {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-on);
   border-color: var(--accent);
 }
 .crm-btn--accent:hover {
@@ -908,7 +914,7 @@
 }
 .lp-cta--primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-on);
 }
 .lp-cta--primary:hover {
   background: var(--accent-press);
@@ -959,7 +965,7 @@
 }
 .lp-flow__step[data-hot='true'] .lp-flow__num {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-on);
 }
 .lp-flow__step:not(:last-child)::before {
   content: '';
@@ -1263,7 +1269,7 @@
   height: 17px;
   border-radius: 2px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-on);
   font-size: 10.5px;
   font-weight: 720;
   display: grid;
@@ -1447,7 +1453,7 @@
 }
 .an-result__item[data-rank='0'] .an-result__rank {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-on);
 }
 .an-result__name {
   font-size: 16px;
@@ -1649,7 +1655,7 @@
 .gantt__mark[data-done='true'] {
   background: var(--pos);
   border-color: var(--pos);
-  color: #fff;
+  color: var(--pos-on);
 }
 .gantt__mark[data-next='true'] {
   border-color: var(--accent);
