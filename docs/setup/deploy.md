@@ -19,7 +19,7 @@ Vercel 프로젝트 **Settings → Environment Variables** 에 넣는다.
 |------|-----------------|
 | `SUPABASE_URL` | 메모리 저장으로 폴백. 배포 인스턴스가 재시작될 때마다 데이터가 사라진다 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 같음. **서버 전용 — `NEXT_PUBLIC_` 금지** |
-| `PUBLIC_DATA_API_KEY` | 청약홈·LH 동기화가 전부 실패로 보고된다 |
+| `DATA_GO_KR_API_KEY` | 청약홈·LH 동기화가 전부 실패로 보고된다. **`PUBLIC_` 접두사를 붙이지 않는다** — 배포 플랫폼이 공개 노출로 분류한다 |
 | `ADMIN_PASSCODE` | `/admin/*` 전체가 잠긴다 (의도된 기본값) |
 | `NEXT_PUBLIC_SITE_URL` | **알림 링크가 localhost 를 가리킨다.** 배포 도메인으로 반드시 바꾼다 |
 | `RESEND_API_KEY` | 알림이 발송되지 않고 `PREVIEW` 로만 저장된다 |
@@ -31,7 +31,7 @@ Vercel 프로젝트 **Settings → Environment Variables** 에 넣는다.
 # 한 번에 넣기 (Vercel CLI)
 vercel env add SUPABASE_URL production
 vercel env add SUPABASE_SERVICE_ROLE_KEY production
-vercel env add PUBLIC_DATA_API_KEY production
+vercel env add DATA_GO_KR_API_KEY production
 vercel env add ADMIN_PASSCODE production
 vercel env add NEXT_PUBLIC_SITE_URL production
 ```

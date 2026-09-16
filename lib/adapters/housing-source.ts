@@ -1,3 +1,4 @@
+import { hasDataPortalKey } from '@/lib/config/data-portal-key'
 import { generateProperties } from '@/lib/crm/seed-properties'
 import type { Property } from '@/lib/crm/types'
 
@@ -37,7 +38,7 @@ export const applyHomeAdapter: HousingSourceAdapter = {
   label: '청약홈 OpenAPI (공공데이터포털)',
   isOfficial: true,
   async loadProperties() {
-    if (!process.env.PUBLIC_DATA_API_KEY) return []
+    if (!hasDataPortalKey()) return []
     // 실제 매핑은 lib/api.ts 의 분양정보 조회 결과를 Property 로 변환해 연결한다.
     // MVP 데모 범위 밖이므로 빈 배열을 반환한다 (없는 데이터를 만들어내지 않는다).
     return []

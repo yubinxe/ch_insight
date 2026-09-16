@@ -1,3 +1,4 @@
+import { dataPortalKey, hasDataPortalKey } from '@/lib/config/data-portal-key'
 import type { OpportunityRow } from '@/lib/db/types'
 
 /**
@@ -6,7 +7,7 @@ import type { OpportunityRow } from '@/lib/db/types'
  * 이 어댑터는 "모집공고" 정보를 가져온다.
  * 개별 호실의 실시간 공실 정보는 공개 API 범위 밖이므로 만들어내지 않는다.
  *
- * PUBLIC_DATA_API_KEY 가 없거나 인증키가 거부되면 빈 배열과 사유를 반환하고,
+ * 인증키가 없거나 거부되면 빈 배열과 사유를 반환하고,
  * 상위 레이어가 예시 데이터로 폴백한다. 실패를 조용히 숨기지 않는다.
  */
 
@@ -110,18 +111,18 @@ export function normalizeApplyhome(items: ApplyhomeItem[], fetchedAt: string): P
 }
 
 export function isApplyhomeConfigured() {
-  return Boolean((process.env.PUBLIC_DATA_API_KEY ?? '').trim())
+  return hasDataPortalKey()
 }
 
 export async function fetchApplyhome(opts: { perPage?: number; monthsBack?: number } = {}): Promise<FetchResult> {
   const fetchedAt = new Date().toISOString()
-  const key = (process.env.PUBLIC_DATA_API_KEY ?? '').trim()
+  const key = dataPortalKey()
 
   if (!key) {
     return {
       rows: [],
       ok: false,
-      reason: 'PUBLIC_DATA_API_KEY 가 설정되지 않았습니다.',
+      reason: 'DATA_GO_KR_API_KEY 가 설정되지 않았습니다.',
       fetchedAt,
     }
   }

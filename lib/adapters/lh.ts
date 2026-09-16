@@ -1,3 +1,4 @@
+import { dataPortalKey, hasDataPortalKey } from '@/lib/config/data-portal-key'
 import type { OpportunityRow } from '@/lib/db/types'
 import type { FetchResult } from './applyhome'
 
@@ -8,7 +9,7 @@ import type { FetchResult } from './applyhome'
  * 다만 목록 API 에는 보증금·월 임대료·전용면적이 없다 — 공고문(PDF) 안에 있다.
  * 없는 값은 null 로 두고 화면에서 "모집공고문 확인"으로 적는다.
  *
- * PUBLIC_DATA_API_KEY 를 공유해서 쓴다. 키가 없으면 빈 배열과 사유를 돌려주고,
+ * 공공데이터포털 인증키를 청약홈과 공유해서 쓴다. 키가 없으면 빈 배열과 사유를 돌려주고,
  * 실패를 예시 데이터로 덮지 않는다.
  */
 
@@ -141,15 +142,15 @@ export function normalizeLh(items: LhItem[], fetchedAt: string): Partial<Opportu
 }
 
 export function isLhConfigured() {
-  return Boolean((process.env.PUBLIC_DATA_API_KEY ?? '').trim())
+  return hasDataPortalKey()
 }
 
 export async function fetchLh(opts: { perPage?: number } = {}): Promise<FetchResult> {
   const fetchedAt = new Date().toISOString()
-  const key = (process.env.PUBLIC_DATA_API_KEY ?? '').trim()
+  const key = dataPortalKey()
 
   if (!key) {
-    return { rows: [], ok: false, reason: 'PUBLIC_DATA_API_KEY 가 설정되지 않았습니다.', fetchedAt }
+    return { rows: [], ok: false, reason: 'DATA_GO_KR_API_KEY 가 설정되지 않았습니다.', fetchedAt }
   }
 
   const params = new URLSearchParams({

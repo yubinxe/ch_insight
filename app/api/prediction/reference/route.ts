@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server'
 import { aggregateReferenceStats } from '@/lib/subscription-score'
 import type { ScoreStatItem } from '@/lib/types'
+import { dataPortalKey } from '@/lib/config/data-portal-key'
 
 const BASE = 'https://api.odcloud.kr/api'
-const KEY = process.env.PUBLIC_DATA_API_KEY!
+const KEY = dataPortalKey()
 
 const REGION_NAMES: Record<string, string> = {
   '100': '서울',

@@ -18,7 +18,7 @@ npm run dev
 ```
 
 API 키가 없어도 예시 데이터로 전체 화면이 동작한다.
-`PUBLIC_DATA_API_KEY` 를 넣고 `/admin` → 청약홈 동기화를 누르면 **실제 모집공고**가 들어온다.
+`DATA_GO_KR_API_KEY` 를 넣고 `/admin` → 청약홈 동기화를 누르면 **실제 모집공고**가 들어온다.
 
 Supabase(`jipcatch`, 서울 리전)가 붙어 있어 데이터가 영구 보관된다.
 새로 클론했다면 자격증명을 복사해 넣는다 — [`docs/setup/supabase.md`](docs/setup/supabase.md)
@@ -122,7 +122,7 @@ ADMIN_PASSCODE=원하는_접속_코드
 | CSV | 직접 올린 공고 | `lib/adapters/csv-opportunities.ts` |
 | 예시 | 화면 구성을 보여주는 합성 데이터 (`dataOrigin: 'SYNTHETIC'`) | `lib/crm/seed-properties.ts` |
 
-둘 다 `PUBLIC_DATA_API_KEY` 하나를 쓴다. 한 출처가 실패해도 다른 출처는 저장하고,
+둘 다 `DATA_GO_KR_API_KEY` 하나를 쓴다. 한 출처가 실패해도 다른 출처는 저장하고,
 실패는 `sources[]` 에 그대로 보고한다. **실패를 예시 데이터로 덮지 않는다.**
 
 LH 목록 API 는 지역을 **지역본부 단위**로만 준다(`서울`, `전남·광주`, `전국`).
