@@ -21,6 +21,7 @@ const TABLES = [
   'applications',
   'application_tasks',
   'inquiries',
+  'consumer_state',
 ]
 
 function loadEnv(file) {

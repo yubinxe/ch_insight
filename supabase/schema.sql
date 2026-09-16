@@ -204,6 +204,16 @@ create table if not exists inquiries (
   created_at      timestamptz not null default now()
 );
 
+-- ── 소비자 세션 스냅샷 ──────────────────────────────────────
+-- 세션·관심공고·알림을 문서 한 건으로 보관한다.
+-- 서버리스 파일시스템은 읽기 전용이라 파일로는 배포에서 동작하지 않는다.
+-- 정규화된 테이블이 아니며 동시 쓰기는 마지막 쓰기가 이긴다 — 분리가 다음 단계다.
+create table if not exists consumer_state (
+  id         text primary key,
+  doc        jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 -- ── updated_at 자동 갱신 ────────────────────────────────────
 -- search_path 를 비워 스키마 하이재킹을 막는다 (pg_catalog 은 항상 잡힌다)
 create or replace function touch_updated_at() returns trigger
@@ -245,6 +255,7 @@ alter table behavior_events      enable row level security;
 alter table applications         enable row level security;
 alter table application_tasks    enable row level security;
 alter table inquiries            enable row level security;
+alter table consumer_state       enable row level security;
 
 -- 공고는 공개 정보이므로 읽기만 허용하고 싶을 때:
 -- create policy "public read opportunities" on opportunities

@@ -1,6 +1,7 @@
 import { randomUUID, randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync } from 'fs'
 import { join } from 'path'
+import { getSupabase, isSupabaseConfigured } from '@/lib/db/supabase'
 import type {
   AlertScope,
   AlertSubscription,
@@ -14,9 +15,18 @@ import type {
 /**
  * 소비자 세션 저장소.
  *
- * 지금은 서버 메모리에만 보관하므로 서버가 재시작하면 사라진다.
- * 실사용 전에는 영속 저장소로 교체해야 하며, 그 전까지 어떤 화면에서도
- * "영구 보관된다"고 표시하지 않는다.
+ * 상태는 프로세스 메모리에 두고, 아래 순서로 밖에 내보낸다.
+ *
+ *   1) Supabase `consumer_state` 문서  — 있으면 이것을 쓴다. 인스턴스가 바뀌어도 남는다.
+ *   2) 로컬 파일 `.data/consumer.json` — 로컬 개발용.
+ *   3) 메모리만                        — 위 둘이 모두 막히면 여기까지 내려온다.
+ *
+ * 서버리스(Vercel)의 파일시스템은 읽기 전용이라 2번이 EROFS 로 죽는다.
+ * 예전에는 그 예외가 그대로 올라와 `/api/me` 가 500 을 냈다. 이제는 한 번 감지하고
+ * 파일 쓰기를 접는다 — 저장이 안 되는 것과 앱이 죽는 것은 다른 문제다.
+ *
+ * 문서 한 건으로 통째 저장하므로 **동시 쓰기는 마지막 쓰기가 이긴다.**
+ * 세션·관심공고·알림을 정규화된 테이블로 분리하는 것이 다음 단계다.
  */
 interface ConsumerState {
   sessions: Map<string, ConsumerSession>
@@ -39,18 +49,106 @@ export interface ConsumerEvent {
   props: Record<string, string | number | boolean | null>
 }
 
-const globalRef = globalThis as unknown as { __myhomeplzConsumer?: ConsumerState }
+const globalRef = globalThis as unknown as {
+  __myhomeplzConsumer?: ConsumerState
+  /** 파일 쓰기가 막힌 환경인지 (서버리스). 한 번 확인하면 다시 시도하지 않는다 */
+  __myhomeplzFsBlocked?: boolean
+  /** 프로세스당 한 번만 도는 하이드레이션 */
+  __myhomeplzHydrate?: Promise<void>
+}
+
 const dataDir = process.env.CONSUMER_DATA_DIR || join(process.cwd(), '.data')
 const dataFile = join(dataDir, 'consumer.json')
+const DOC_ID = 'consumer'
 
-/** 단일 Node 프로세스의 로컬 영속 저장. 다중 인스턴스 배포에는 DB adapter가 필요하다. */
+/** 저장 형태 — Map 은 JSON 으로 바로 안 나가므로 배열로 편다 */
+function serialize(s: ConsumerState) {
+  return {
+    ...s,
+    sessions: [...s.sessions],
+    users: [...s.users],
+    usersByEmail: [...s.usersByEmail],
+    credentials: [...s.credentials],
+    profiles: [...s.profiles],
+  }
+}
+
+function deserialize(saved: ReturnType<typeof serialize>): ConsumerState {
+  return {
+    ...saved,
+    sessions: new Map(saved.sessions),
+    users: new Map(saved.users),
+    usersByEmail: new Map(saved.usersByEmail),
+    credentials: new Map(saved.credentials ?? []),
+    profiles: new Map(saved.profiles ?? []),
+  }
+}
+
+/** 파일로 내보낸다. 읽기 전용 파일시스템이면 한 번만 확인하고 접는다 */
+function persistToFile(json: string) {
+  if (globalRef.__myhomeplzFsBlocked) return
+  try {
+    mkdirSync(dataDir, { recursive: true })
+    writeFileSync(`${dataFile}.tmp`, json, { mode: 0o600 })
+    renameSync(`${dataFile}.tmp`, dataFile)
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code
+    if (code === 'EROFS' || code === 'EACCES' || code === 'EPERM') {
+      globalRef.__myhomeplzFsBlocked = true
+      console.warn(
+        `[consumer] 파일 저장 불가(${code}) — 이 환경에서는 파일로 보관하지 않습니다.` +
+          (isSupabaseConfigured() ? '' : ' Supabase 도 없어 메모리에만 남습니다.'),
+      )
+      return
+    }
+    throw err
+  }
+}
+
+/** Supabase 문서로 내보낸다. 응답을 기다리지 않는다 — 저장 실패가 요청을 막지 않는다 */
+function persistToSupabase(doc: unknown) {
+  const sb = getSupabase()
+  if (!sb) return
+  void sb
+    .from('consumer_state')
+    .upsert({ id: DOC_ID, doc, updated_at: new Date().toISOString() })
+    .then(({ error }) => {
+      if (error) console.error('[consumer] Supabase 저장 실패:', error.message)
+    })
+}
+
 function persist() {
-  const s = globalRef.__myhomeplzConsumer!
-  mkdirSync(dataDir, { recursive: true })
-  const json = JSON.stringify({ ...s, sessions: [...s.sessions], users: [...s.users],
-    usersByEmail: [...s.usersByEmail], credentials: [...s.credentials], profiles: [...s.profiles] })
-  writeFileSync(`${dataFile}.tmp`, json, { mode: 0o600 })
-  renameSync(`${dataFile}.tmp`, dataFile)
+  const state = globalRef.__myhomeplzConsumer!
+  const doc = serialize(state)
+  persistToSupabase(doc)
+  persistToFile(JSON.stringify(doc))
+}
+
+/**
+ * Supabase 문서를 프로세스에 한 번 올린다.
+ *
+ * 저장소가 비동기라 동기 getState() 안에서는 읽을 수 없다.
+ * 모든 소비자 라우트가 거쳐 가는 resolveSession() 에서 먼저 await 한다.
+ */
+export function hydrate(): Promise<void> {
+  if (globalRef.__myhomeplzHydrate) return globalRef.__myhomeplzHydrate
+
+  globalRef.__myhomeplzHydrate = (async () => {
+    const sb = getSupabase()
+    if (!sb) return
+    try {
+      const { data, error } = await sb.from('consumer_state').select('doc').eq('id', DOC_ID).maybeSingle()
+      if (error) {
+        console.error('[consumer] Supabase 로드 실패:', error.message)
+        return
+      }
+      if (data?.doc) globalRef.__myhomeplzConsumer = deserialize(data.doc)
+    } catch (err) {
+      console.error('[consumer] Supabase 로드 예외:', err)
+    }
+  })()
+
+  return globalRef.__myhomeplzHydrate
 }
 
 function getState(): ConsumerState {
@@ -65,13 +163,13 @@ function getState(): ConsumerState {
       credentials: new Map(),
       profiles: new Map(),
     }
-    if (existsSync(dataFile)) {
-      const saved = JSON.parse(readFileSync(dataFile, 'utf8'))
-      globalRef.__myhomeplzConsumer = { ...saved,
-        sessions: new Map(saved.sessions), users: new Map(saved.users),
-        usersByEmail: new Map(saved.usersByEmail), credentials: new Map(saved.credentials ?? []),
-        profiles: new Map(saved.profiles ?? []),
+    // 로컬 파일이 있으면 올린다. 서버리스에서는 애초에 없다.
+    try {
+      if (existsSync(dataFile)) {
+        globalRef.__myhomeplzConsumer = deserialize(JSON.parse(readFileSync(dataFile, 'utf8')))
       }
+    } catch (err) {
+      console.warn('[consumer] 로컬 파일을 읽지 못했습니다:', err)
     }
   }
   return globalRef.__myhomeplzConsumer!
