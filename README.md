@@ -20,12 +20,15 @@ npm run dev
 API 키가 없어도 예시 데이터로 전체 화면이 동작한다.
 `PUBLIC_DATA_API_KEY` 를 넣고 `/admin` → 청약홈 동기화를 누르면 **실제 모집공고**가 들어온다.
 
-Supabase 프로젝트(`jipcatch`, 서울 리전)와 테이블 10개는 이미 만들어져 있다.
-`.env.local` 에 `service_role` 키만 넣으면 데이터가 영구 보관된다 — [`docs/setup/supabase.md`](docs/setup/supabase.md)
+Supabase(`jipcatch`, 서울 리전)가 붙어 있어 데이터가 영구 보관된다.
+새로 클론했다면 자격증명을 복사해 넣는다 — [`docs/setup/supabase.md`](docs/setup/supabase.md)
 
 ```bash
+cat ~/.config/supabase/jipcatch.env >> .env.local
 npm run db:check   # 연결 · 테이블 10개 점검
 ```
+
+키는 레포가 아니라 `~/.config/supabase/` 에 둔다. secret 키에 `NEXT_PUBLIC_` 을 붙이지 않는다.
 
 운영 화면(`/admin/*`)을 열려면 `.env.local` 에 접속 코드를 넣는다. **기본 암호는 두지 않는다.**
 
@@ -179,7 +182,7 @@ Business logic 은 `lib/` 에 있고 UI 컴포넌트는 표현만 담당한다.
 
 | 계층 | 위치 |
 |------|------|
-| 저장소 | `lib/db/repo.ts` — Supabase 없으면 메모리로 폴백 |
+| 저장소 | `lib/db/repo.ts` — Supabase. 자격증명이 없으면 메모리로 폴백해 앱이 죽지 않는다 |
 | 스키마 | `supabase/schema.sql` |
 | 매칭 | `lib/services/matching.ts` |
 | 파이프라인 | `lib/services/pipeline.ts` |
@@ -209,8 +212,6 @@ CSV 업로드는 `POST /api/admin/import` (multipart `file` 또는 JSON `csv`).
 
 ## 아직 안 된 것
 
-- **Supabase service_role 키** — 프로젝트와 스키마는 준비됐으나 키를 넣기 전까지는 메모리에
-  저장되고 서버 재시작 시 사라진다. [`docs/setup/supabase.md`](docs/setup/supabase.md) 한 단계.
 - **공고의 금액·면적** — 청약홈·LH 목록 API 둘 다 보증금·월 임대료·전용면적을 주지 않는다.
   공고문(PDF) 안에만 있다. 비워 두고 `공급금액·면적은 모집공고문에서 확인하세요` 로 표시한다.
 - **LH 공고의 세부 지역** — 목록 API 가 지역본부 단위까지만 준다. 시·군·구를 추정하지 않는다.
