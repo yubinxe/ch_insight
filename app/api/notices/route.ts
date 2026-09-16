@@ -58,10 +58,14 @@ export async function GET(req: NextRequest) {
       .map(([name]) => name)
 
     const byType = (row: Row) => !housingType || row.property.housingType === housingType
-    const pickedOfficial = official.filter(byType).sort(byDeadline)
-    const pickedSample = sample.filter(byType).sort(byDeadline)
 
-    const notices = [...pickedOfficial, ...pickedSample].slice(0, limit)
+    // 화면이 "접수 마감이 가까운 순"이라고 적혀 있으므로 그대로 마감 순으로만 정렬한다.
+    // 실제 공고를 앞으로 몰면 내일 마감인 공고가 한 달 뒤 공고 아래로 내려간다.
+    // 실제/예시 구분은 순서가 아니라 카드의 공식 공고 / 예시 공고 배지가 한다.
+    const notices = [...official, ...sample]
+      .filter(byType)
+      .sort((a, b) => byDeadline(a, b) || (a.property.dataOrigin === 'OFFICIAL' ? -1 : 1))
+      .slice(0, limit)
     const officialCount = notices.filter(r => r.property.dataOrigin === 'OFFICIAL').length
 
     return Response.json({
