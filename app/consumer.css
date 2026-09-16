@@ -126,28 +126,35 @@
   letter-spacing: -0.028em;
 }
 
-/* 섹션 머리 — 인덱스 번호 + 괘선. 잡지 목차의 감각 */
+/* 섹션 머리 — 번호 + 제목 + 보조 링크. 잡지 목차의 감각
+   번호를 제목과 다른 크기·행간으로 두면 따로 노는 물건 두 개로 보인다.
+   같은 서체·같은 크기·같은 행간을 주면 첫 베이스라인이 저절로 맞는다. */
 .cs-sec-head {
-  display: flex;
-  align-items: baseline;
-  gap: 18px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 18px;
+  align-items: start;
   padding-top: 20px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line-ink);
   margin-bottom: 26px;
 }
 .cs-sec-index {
   font-family: var(--font-brand), var(--font-sans);
   font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.06em;
+  font-size: clamp(28px, 2.6vw, 36px);
+  line-height: 1.34;
+  letter-spacing: 0;
   color: var(--accent);
-  flex-shrink: 0;
-  padding-top: 6px;
+  font-variant-numeric: tabular-nums;
 }
 .cs-sec-head__body {
-  flex: 1;
   min-width: 0;
+}
+/* 보조 링크는 제목 첫 줄에 맞춰 내린다 */
+.cs-sec-head > .cs-btn--text {
+  align-self: start;
+  margin-top: clamp(6px, 0.8vw, 12px);
+  white-space: nowrap;
 }
 
 /* 결과 페이지 제목 32 / 26 — 정보 화면이라 Pretendard */
@@ -197,8 +204,20 @@
     font-size: 16px;
   }
   .cs-sec-head {
-    gap: 12px;
+    /* 좁아지면 번호를 제목 위 줄로 올린다. 옆에 붙이면 제목이 두 글자씩 끊긴다 */
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 4px;
     margin-bottom: 20px;
+  }
+  .cs-sec-index {
+    grid-column: 1 / -1;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+  }
+  .cs-sec-head > .cs-btn--text {
+    margin-top: 0;
   }
 }
 
@@ -500,6 +519,95 @@
   font-weight: 500;
   color: var(--muted);
   padding: 2px 0;
+}
+
+/* ── 조건 필터 — 무엇을 고르는 줄인지 이름을 붙인다 ────────
+   칩만 두 줄 늘어놓으면 위가 지역인지 유형인지 알 수 없다.
+   왼쪽에 이름을 두고 각 선택지에 건수를 적어, 누르기 전에
+   어디에 공고가 몰려 있는지 보이게 한다.                        */
+.cs-filter {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  column-gap: 16px;
+  align-items: start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cs-filter:first-of-type {
+  border-top: 1px solid var(--line);
+}
+.cs-filter__label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--muted);
+  /* 칩(높이 44) 의 시각 중앙에 맞춘다 */
+  padding-top: 10px;
+  white-space: nowrap;
+}
+.cs-filter__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 15px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--body);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.16s var(--ease), background 0.16s var(--ease), color 0.16s var(--ease);
+}
+.cs-chip:hover {
+  border-color: var(--line-ink);
+}
+.cs-chip[data-on='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--paper);
+  font-weight: 600;
+}
+/* 건수는 보조 정보다. 이름보다 약하게 */
+.cs-chip__n {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cs-chip[data-on='true'] .cs-chip__n {
+  color: var(--paper);
+  opacity: 0.72;
+}
+
+@media (max-width: 760px) {
+  .cs-filter {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .cs-filter__label {
+    padding-top: 0;
+  }
+  /* 좁은 화면에서는 가로로 넘긴다. 줄바꿈으로 화면을 덮지 않게 */
+  .cs-filter__chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .cs-filter__chips::-webkit-scrollbar {
+    display: none;
+  }
+  .cs-chip {
+    flex-shrink: 0;
+  }
 }
 
 /* ── 공고 카드 — 표가 아니라 카탈로그 한 항목 ──────────── */
@@ -1422,15 +1530,6 @@
   padding-bottom: 14px;
   border-bottom: 1px solid var(--line);
 }
-.cs-sec-index {
-  font-family: var(--font-brand), var(--font-sans);
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: 0.02em;
-  color: var(--accent);
-  flex-shrink: 0;
-  padding-top: 2px;
-}
 
 /* ── FAQ — Q. 접두에 브랜드 액센트 ─────────────────────── */
 .cs-faq__q {
@@ -1481,11 +1580,475 @@
   .cs-step-card__num {
     font-size: 19px;
   }
-  .cs-sec-index {
-    font-size: 17px;
-  }
   .cs-notice__name {
     font-size: 21px;
+  }
+}
+
+/* ── 움직임 ──────────────────────────────────────────────
+   가만히 있는 지면은 정적이 아니라 죽은 것으로 읽힌다.
+   다만 움직임은 정보가 있을 때만 준다 — 등장·반응·마감.
+   장식으로 도는 것은 두지 않는다. 전부 reduced-motion 에서 꺼진다.   */
+
+/* 스크롤 등장 — 서버 HTML 은 보이는 상태이고, 숨기는 일은 JS 가 한다 */
+[data-reveal] {
+  transition: opacity 0.55s var(--ease), transform 0.55s var(--ease);
+}
+[data-reveal='out'] {
+  opacity: 0;
+  transform: translateY(18px);
+}
+[data-reveal='in'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* 공고 카드 — 누를 수 있는 물건처럼 반응한다 */
+.cs-notice {
+  transition: transform 0.28s var(--ease), border-color 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+  will-change: transform;
+}
+.cs-notice:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-ink);
+  box-shadow: 0 1px 2px rgba(20, 17, 12, 0.04), 0 18px 34px -22px rgba(20, 17, 12, 0.5);
+}
+.cs-notice:active {
+  transform: translateY(-1px);
+}
+/* 카드 번호는 뒤로 물러나 있다가 hover 에 또렷해진다 */
+.cs-notice__index {
+  transition: color 0.28s var(--ease), letter-spacing 0.28s var(--ease);
+}
+.cs-notice:hover .cs-notice__index {
+  color: var(--accent);
+  letter-spacing: 0.14em;
+}
+/* "자세히 보기 →" 의 화살표가 따라 나간다 */
+.cs-notice__meta span[style] {
+  display: inline-block;
+}
+.cs-notice:hover .cs-arrow {
+  transform: translateX(4px);
+}
+.cs-arrow {
+  display: inline-block;
+  transition: transform 0.24s var(--ease);
+}
+
+/* 버튼·칩 — 눌린 것이 손에 잡히게 */
+.cs-btn {
+  transition: transform 0.16s var(--ease), background 0.18s var(--ease),
+    color 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+.cs-btn:active:not(:disabled) {
+  transform: scale(0.975);
+}
+.cs-chip:active {
+  transform: scale(0.96);
+}
+
+/* ── 마감 티커 — 이 서비스에서 가장 빨리 사라지는 정보 ──── */
+.cs-ticker {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-top: 1px solid var(--line-ink);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  overflow: hidden;
+}
+.cs-ticker__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 0 18px;
+  background: var(--brand);
+  color: var(--paper);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.cs-ticker__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--accent);
+  animation: csPulse 1.8s var(--ease) infinite;
+}
+@keyframes csPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.78); }
+}
+.cs-ticker__view {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  /* 양 끝을 흐려 잘린 느낌을 없앤다 */
+  mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+}
+.cs-ticker__lane {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: max-content;
+  animation: csTicker 42s linear infinite;
+}
+.cs-ticker:hover .cs-ticker__lane,
+.cs-ticker:focus-within .cs-ticker__lane {
+  animation-play-state: paused;
+}
+@keyframes csTicker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.cs-ticker__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 15px 22px;
+  text-decoration: none;
+  color: var(--body);
+  border-right: 1px solid var(--line);
+  white-space: nowrap;
+}
+.cs-ticker__item:hover {
+  background: var(--paper);
+}
+.cs-ticker__d {
+  font-family: var(--font-brand), var(--font-sans);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cs-ticker__d[data-soon='true'] {
+  color: var(--accent);
+}
+.cs-ticker__name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--title);
+  max-width: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-ticker__region {
+  font-size: 14px;
+  color: var(--muted);
+}
+.cs-ticker__sample {
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px dashed var(--muted);
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+
+@media (max-width: 760px) {
+  .cs-ticker__tag {
+    padding: 0 12px;
+    font-size: 14px;
+  }
+  .cs-ticker__name {
+    max-width: 22ch;
+  }
+}
+
+/* 숫자가 올라오며 자리를 잡는다 */
+.cs-count {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  .cs-notice,
+  .cs-btn,
+  .cs-chip,
+  .cs-arrow,
+  .cs-notice__index {
+    transition: none;
+  }
+  [data-reveal='out'] {
+    opacity: 1;
+    transform: none;
+  }
+  .cs-notice:hover,
+  .cs-btn:active:not(:disabled),
+  .cs-chip:active {
+    transform: none;
+  }
+  .cs-ticker__lane,
+  .cs-ticker__pulse {
+    animation: none;
+  }
+}
+
+/* ── 계정 · 세션 ─────────────────────────────────────────
+   로그인은 "다른 페이지로 갔다 오는 일"이 아니라 보던 자리에서
+   이어지는 동작이다. 모션·상태·되돌아갈 곳을 모두 그 기준으로 둔다.   */
+
+/* 로그인 지면 — 왼쪽에 "무엇이 이어지는지", 오른쪽에 입력 */
+.cs-auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: start;
+  padding-top: clamp(40px, 6vw, 76px);
+}
+@media (max-width: 900px) {
+  .cs-auth {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+}
+
+/* 이어질 것들 — 빈 약속이 아니라 지금 세션에 실제로 있는 값을 적는다 */
+.cs-auth__carry {
+  border-top: 1px solid var(--line-ink);
+  padding-top: 20px;
+}
+.cs-auth__carry-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: baseline;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cs-auth__carry-n {
+  font-family: var(--font-brand), var(--font-sans);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--title);
+  font-variant-numeric: tabular-nums;
+}
+.cs-auth__carry-n[data-empty='true'] {
+  color: var(--muted);
+}
+.cs-auth__carry-k {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--title);
+}
+.cs-auth__carry-v {
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* 모드 전환 — 글자가 툭 바뀌는 대신 표시가 미끄러진다 */
+.cs-seg {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  background: var(--paper);
+  margin-bottom: 26px;
+}
+.cs-seg__thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: calc(var(--r-btn) - 3px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: transform 0.26s var(--ease);
+  pointer-events: none;
+}
+.cs-seg[data-index='1'] .cs-seg__thumb {
+  transform: translateX(100%);
+}
+.cs-seg__btn {
+  position: relative;
+  z-index: 1;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s var(--ease);
+}
+.cs-seg__btn[aria-selected='true'] {
+  color: var(--title);
+  font-weight: 700;
+}
+
+/* 입력 — 상태를 색이 아니라 괘선과 문장으로 알린다 */
+.cs-field {
+  margin-top: 20px;
+}
+.cs-field:first-of-type {
+  margin-top: 0;
+}
+.cs-field__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.cs-input:focus-visible {
+  outline: none;
+  border-color: var(--line-ink);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.cs-input[aria-invalid='true'] {
+  border-color: var(--urgent);
+}
+.cs-field__msg {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 7px;
+  color: var(--muted);
+}
+.cs-field__msg[data-tone='bad'] {
+  color: var(--urgent);
+}
+.cs-field__msg[data-tone='good'] {
+  color: var(--ok);
+}
+
+/* 비밀번호 보기 — 12자 이상을 요구하면서 확인할 방법이 없으면 안 된다 */
+.cs-pw {
+  position: relative;
+}
+.cs-pw .cs-input {
+  padding-right: 68px;
+}
+.cs-pw__toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.cs-pw__toggle:hover {
+  color: var(--title);
+  background: var(--paper);
+}
+
+/* 비밀번호 길이 — 숫자를 세게 하지 않고 눈으로 보이게 */
+.cs-pw__meter {
+  display: flex;
+  gap: 3px;
+  margin-top: 9px;
+}
+.cs-pw__seg {
+  height: 3px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--paper-2);
+  transition: background 0.22s var(--ease);
+}
+.cs-pw__seg[data-on='true'] {
+  background: var(--title);
+}
+
+/* 제출 — 버튼 안에서 진행을 알린다. 화면을 가리지 않는다 */
+.cs-submit {
+  position: relative;
+  overflow: hidden;
+}
+.cs-submit[data-busy='true']::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.5;
+  animation: csProgress 1.1s var(--ease) infinite;
+}
+@keyframes csProgress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 모달 — 튀어나오지 않고 올라온다 */
+.cs-modal__backdrop {
+  animation: csFade 0.2s var(--ease) both;
+}
+.cs-modal__panel {
+  animation: csRise 0.3s var(--ease) both;
+}
+@keyframes csFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes csRise {
+  from { opacity: 0; transform: translateY(14px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 모드가 바뀔 때 입력 묶음이 자리를 바꾸는 느낌을 준다 */
+.cs-swap {
+  animation: csSwap 0.24s var(--ease) both;
+}
+@keyframes csSwap {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 완료 표시 — 체크가 그려진다 */
+.cs-done__mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  animation: csRise 0.3s var(--ease) both;
+}
+.cs-done__mark path {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  animation: csDraw 0.42s var(--ease) 0.12s forwards;
+}
+@keyframes csDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* 움직임을 원치 않는 사용자에게는 전부 끈다 */
+@media (prefers-reduced-motion: reduce) {
+  .cs-modal__backdrop,
+  .cs-modal__panel,
+  .cs-swap,
+  .cs-done__mark,
+  .cs-done__mark path,
+  .cs-submit[data-busy='true']::after {
+    animation: none;
+  }
+  .cs-seg__thumb {
+    transition: none;
+  }
+  .cs-done__mark path {
+    stroke-dashoffset: 0;
   }
 }
 

@@ -14,6 +14,7 @@ const NAV = [
   { href: '/admin/customers', label: '고객관리' },
   { href: '/admin/properties', label: '물건관리' },
   { href: '/admin/applications', label: '지원관리' },
+  { href: '/admin/routines', label: '루틴' },
   { href: '/insights', label: '시장통계' },
 ]
 

@@ -61,7 +61,11 @@ export default function ConsumerShell({ children }: { children: ReactNode }) {
                 {user.nickname}님
               </Link>
             ) : (
-              <Link href="/login" className="cs-btn cs-btn--sm cs-btn--ghost">
+              // 보던 자리를 들고 간다. 로그인 뒤 고정된 페이지로 밀어내지 않는다
+              <Link
+                href={pathname && pathname !== '/login' ? `/login?next=${encodeURIComponent(pathname)}` : '/login'}
+                className="cs-btn cs-btn--sm cs-btn--ghost"
+              >
                 로그인
               </Link>
             )}

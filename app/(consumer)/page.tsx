@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import HomeNoticeStrip from '@/components/consumer/HomeNoticeStrip'
+import DeadlineTicker from '@/components/consumer/DeadlineTicker'
+import Reveal from '@/components/consumer/Reveal'
 
 const STEPS = [
   {
@@ -180,10 +182,13 @@ export default function ConsumerHome() {
       </section>
 
       {/* ── 지금 살펴볼 공고 ────────────────────────────── */}
+      {/* 히어로 다음 — 가장 빨리 사라지는 정보부터 흐른다 */}
+      <DeadlineTicker />
+
       <HomeNoticeStrip />
 
       {/* ── 준비 순서 ───────────────────────────────────── */}
-      <section className="cs-wrap cs-section">
+      <Reveal as="section" className="cs-wrap cs-section">
         <SectionHead
           index="02"
           title="복잡한 청약, 이 순서로 준비하세요"
@@ -198,10 +203,10 @@ export default function ConsumerHome() {
             </div>
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* ── 알림 ────────────────────────────────────────── */}
-      <section className="cs-wrap cs-section">
+      <Reveal as="section" className="cs-wrap cs-section">
         <SectionHead index="03" title="다음에도, 처음부터 찾지 않도록" />
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 28 }}>
           <p className="cs-lead" style={{ maxWidth: '44ch' }}>
@@ -213,10 +218,10 @@ export default function ConsumerHome() {
             </Link>
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* ── 신뢰 ────────────────────────────────────────── */}
-      <section className="cs-wrap cs-section">
+      <Reveal as="section" className="cs-wrap cs-section">
         <SectionHead
           index="04"
           title="확인하고, 구분해서 보여드려요"
@@ -245,10 +250,10 @@ export default function ConsumerHome() {
             </p>
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* ── FAQ ─────────────────────────────────────────── */}
-      <section className="cs-wrap cs-section">
+      <Reveal as="section" className="cs-wrap cs-section">
         <SectionHead index="05" title="처음이라 궁금하신 것들" />
         <div className="cs-faq">
           {FAQ.map(f => (
@@ -258,10 +263,10 @@ export default function ConsumerHome() {
             </details>
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* ── 마지막 CTA ──────────────────────────────────── */}
-      <section className="cs-wrap cs-section">
+      <Reveal as="section" className="cs-wrap cs-section">
         <div className="cs-cta-band">
           <h2 className="cs-section-title">
             내 조건에 맞는 공고,
@@ -272,7 +277,7 @@ export default function ConsumerHome() {
             내 조건으로 공고 찾기
           </Link>
         </div>
-      </section>
+      </Reveal>
     </>
   )
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import type { UrgencyInfo } from '@/lib/crm/services/scoring'
 import type { Property } from '@/lib/crm/types'
 import NoticeCard from './NoticeCard'
+import FilterRow, { type FilterOption } from './FilterRow'
 
 interface Row {
   property: Property
@@ -17,8 +18,9 @@ export default function NoticeBrowser() {
   const [nonce, setNonce] = useState(0)
   const [result, setResult] = useState<{ key: string; rows: Row[]; error: string | null } | null>(null)
   // 칩 목록은 응답에서 온다. 고정 목록을 두면 실제 공고 지역·유형을 고를 수 없다.
-  const [types, setTypes] = useState<string[]>([])
-  const [regions, setRegions] = useState<string[]>([])
+  const [types, setTypes] = useState<FilterOption[]>([])
+  const [regions, setRegions] = useState<FilterOption[]>([])
+  const [matched, setMatched] = useState(0)
 
   const key = `${region}|${type}|${nonce}`
   const loading = result?.key !== key
@@ -33,12 +35,17 @@ export default function NoticeBrowser() {
 
     fetch(`/api/notices?${params}`, { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('공고를 불러오지 못했어요.'))))
-      .then((json: { notices: Row[]; housingTypes?: string[]; regions?: string[] }) => {
+      .then((json: {
+        notices: Row[]
+        housingTypes?: FilterOption[]
+        regions?: FilterOption[]
+        matched?: number
+      }) => {
         if (!alive) return
         setResult({ key, rows: json.notices, error: null })
-        // 지역을 바꿔도 유형 칩이 사라지지 않게 지금까지 본 값을 합친다
-        if (json.housingTypes?.length) setTypes(prev => [...new Set([...prev, ...json.housingTypes!])])
-        if (json.regions?.length) setRegions(json.regions)
+        if (json.housingTypes) setTypes(json.housingTypes)
+        if (json.regions) setRegions(json.regions)
+        setMatched(json.matched ?? json.notices.length)
       })
       .catch((err: unknown) => {
         if (alive) {
@@ -55,15 +62,6 @@ export default function NoticeBrowser() {
     }
   }, [region, type, key])
 
-  const chip = (active: boolean) => ({
-    minHeight: 44,
-    padding: '0 16px',
-    cursor: 'pointer',
-    border: active ? '0' : '1px solid var(--line)',
-    background: active ? 'var(--brand)' : '#fff',
-    color: active ? '#fff' : 'var(--body)',
-  })
-
   return (
     <div className="cs-wrap" style={{ paddingTop: 44 }}>
       <h1 className="cs-page-title">모집 중인 공고</h1>
@@ -74,33 +72,15 @@ export default function NoticeBrowser() {
         </Link>
       </p>
 
-      <div className="cs-badge-row" style={{ margin: '26px 0 10px' }}>
-        {['전체', ...regions].map(r => (
-          <button
-            key={r}
-            type="button"
-            className="cs-badge"
-            style={chip(region === r)}
-            onClick={() => setRegion(r)}
-            aria-pressed={region === r}
-          >
-            {r}
-          </button>
-        ))}
-      </div>
-      <div className="cs-badge-row" style={{ marginBottom: 30 }}>
-        {['전체', ...types].map(t => (
-          <button
-            key={t}
-            type="button"
-            className="cs-badge"
-            style={{ ...chip(type === t), background: type === t ? 'var(--title)' : '#fff' }}
-            onClick={() => setType(t)}
-            aria-pressed={type === t}
-          >
-            {t}
-          </button>
-        ))}
+      <div style={{ margin: '26px 0 30px' }}>
+        <FilterRow
+          label="지역"
+          options={regions}
+          value={region}
+          total={matched}
+          onChange={setRegion}
+        />
+        <FilterRow label="유형" options={types} value={type} total={matched} onChange={setType} />
       </div>
 
       {loading ? (

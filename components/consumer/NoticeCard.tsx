@@ -120,7 +120,9 @@ export default function NoticeCard({
           <br />
           {property.source}
           <br />
-          <span style={{ color: 'var(--brand)', fontSize: 16, fontWeight: 600 }}>자세히 보기 →</span>
+          <span style={{ color: 'var(--brand)', fontSize: 16, fontWeight: 600 }}>
+            자세히 보기 <span className="cs-arrow">→</span>
+          </span>
         </div>
         <SaveButton propertyId={property.id} />
       </div>

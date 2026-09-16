@@ -5,14 +5,12 @@ import { useEffect, useState } from 'react'
 import type { Property } from '@/lib/crm/types'
 import type { UrgencyInfo } from '@/lib/crm/services/scoring'
 import NoticeCard from './NoticeCard'
+import FilterRow, { type FilterOption } from './FilterRow'
 
 interface NoticeRow {
   property: Property
   urgency: UrgencyInfo
 }
-
-const REGIONS = ['전체', '관악구', '동작구', '마포구', '영등포구', '성동구']
-const TYPES = ['전체', '청년매입임대', '행복주택', '공공임대']
 
 export default function HomeNoticeStrip() {
   const [region, setRegion] = useState('전체')
@@ -20,6 +18,10 @@ export default function HomeNoticeStrip() {
   const [attempt, setAttempt] = useState(0)
   /** 어떤 조건의 결과인지 함께 담아, 로딩 여부를 파생값으로 계산한다 */
   const [result, setResult] = useState<{ key: string; rows: NoticeRow[]; error: string | null } | null>(null)
+  // 선택지는 실제 데이터에서 온다. 고정 목록이면 없는 지역을 고르게 된다.
+  const [regions, setRegions] = useState<FilterOption[]>([])
+  const [types, setTypes] = useState<FilterOption[]>([])
+  const [matched, setMatched] = useState(0)
 
   const key = `${region}|${type}|${attempt}`
   const loading = result?.key !== key
@@ -34,8 +36,18 @@ export default function HomeNoticeStrip() {
 
     fetch(`/api/notices?${params}`, { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('불러오지 못했어요'))))
-      .then((data: { notices: NoticeRow[] }) => {
-        if (alive) setResult({ key, rows: data.notices, error: null })
+      .then((data: {
+        notices: NoticeRow[]
+        regions?: FilterOption[]
+        housingTypes?: FilterOption[]
+        matched?: number
+      }) => {
+        if (!alive) return
+        setResult({ key, rows: data.notices, error: null })
+        // 홈은 훑어보는 자리다. 선택지를 앞에서부터 6개만 보여준다.
+        if (data.regions) setRegions(data.regions.slice(0, 6))
+        if (data.housingTypes) setTypes(data.housingTypes.slice(0, 6))
+        setMatched(data.matched ?? data.notices.length)
       })
       .catch((err: unknown) => {
         if (alive) {
@@ -58,46 +70,14 @@ export default function HomeNoticeStrip() {
             접수 마감이 가까운 순으로 보여드려요.
           </p>
         </div>
-        <Link href="/notices" className="cs-btn cs-btn--text" style={{ flexShrink: 0 }}>
+        <Link href="/notices" className="cs-btn cs-btn--text">
           모두 보기
         </Link>
       </div>
 
-      <div className="cs-badge-row" style={{ margin: '24px 0 12px' }}>
-        {REGIONS.map(r => (
-          <button
-            key={r}
-            type="button"
-            className="cs-badge"
-            style={
-              region === r
-                ? { background: 'var(--brand)', color: '#fff', border: 0, cursor: 'pointer', minHeight: 44, padding: '0 16px' }
-                : { border: '1px solid var(--line)', background: '#fff', cursor: 'pointer', minHeight: 44, padding: '0 16px' }
-            }
-            onClick={() => setRegion(r)}
-            aria-pressed={region === r}
-          >
-            {r}
-          </button>
-        ))}
-      </div>
-      <div className="cs-badge-row" style={{ marginBottom: 28 }}>
-        {TYPES.map(t => (
-          <button
-            key={t}
-            type="button"
-            className="cs-badge"
-            style={
-              type === t
-                ? { background: 'var(--title)', color: '#fff', border: 0, cursor: 'pointer', minHeight: 44, padding: '0 16px' }
-                : { border: '1px solid var(--line)', background: '#fff', cursor: 'pointer', minHeight: 44, padding: '0 16px' }
-            }
-            onClick={() => setType(t)}
-            aria-pressed={type === t}
-          >
-            {t}
-          </button>
-        ))}
+      <div style={{ margin: '24px 0 26px' }}>
+        <FilterRow label="지역" options={regions} value={region} total={matched} onChange={setRegion} />
+        <FilterRow label="유형" options={types} value={type} total={matched} onChange={setType} />
       </div>
 
       {/* 로딩과 0건은 다른 상태다 */}

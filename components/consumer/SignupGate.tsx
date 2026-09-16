@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useConsumer } from './ConsumerProvider'
+import { AuthSwitch, EmailField, PasswordField, isEmailShaped, MIN_PASSWORD } from './AuthFields'
 import type { PendingIntentKind } from '@/lib/crm/types'
 
 interface GateRequest {
@@ -165,18 +166,7 @@ export default function SignupGate({ children }: { children: ReactNode }) {
 
             {done ? (
               <>
-                <div
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 16,
-                    background: 'var(--ok-soft)',
-                    color: 'var(--ok)',
-                    display: 'grid',
-                    placeItems: 'center',
-                    marginBottom: 18,
-                  }}
-                >
+                <div className="cs-done__mark">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m5 13 4 4L19 7" />
                   </svg>
@@ -200,31 +190,30 @@ export default function SignupGate({ children }: { children: ReactNode }) {
                 </p>
 
                 {req.propertyName && <p className="cs-mode-note" style={{ marginBottom: 18 }}>{req.propertyName}</p>}
-                <label className="cs-field__label" htmlFor="gate-email">
-                  이메일 주소
-                </label>
-                <input
-                  id="gate-email"
-                  className="cs-input"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={user?.email ?? email}
-                  onChange={e => setEmail(e.target.value)}
-                  disabled={Boolean(user)}
-                />
-                {user && (
-                  <p className="cs-note" style={{ marginTop: 8 }}>
+
+                {user ? (
+                  // 이미 로그인했으면 다시 묻지 않는다
+                  <p className="cs-mode-note" style={{ marginBottom: 4 }}>
                     {user.email} 계정으로 진행합니다.
                   </p>
+                ) : (
+                  <>
+                    <AuthSwitch
+                      mode={loginMode ? 'login' : 'signup'}
+                      onChange={m => { setLoginMode(m === 'login'); setError(null) }}
+                      disabled={busy}
+                    />
+                    <div key={loginMode ? 'login' : 'signup'} className="cs-swap">
+                      <EmailField value={email} onChange={setEmail} disabled={busy} />
+                      <PasswordField
+                        value={password}
+                        onChange={setPassword}
+                        mode={loginMode ? 'login' : 'signup'}
+                        disabled={busy}
+                      />
+                    </div>
+                  </>
                 )}
-
-                {!user && <>
-                  <label className="cs-field__label" htmlFor="gate-password" style={{ marginTop: 18 }}>비밀번호</label>
-                  <input id="gate-password" className="cs-input" type="password" minLength={12} maxLength={128} autoComplete={loginMode ? 'current-password' : 'new-password'} placeholder="12자 이상" value={password} onChange={e => setPassword(e.target.value)} />
-                  <button className="cs-btn cs-btn--text" onClick={() => setLoginMode(!loginMode)}>{loginMode ? '새 계정 만들기' : '이미 계정이 있어요 · 로그인'}</button>
-                </>}
                 {needsConsent && (
                   <label className="cs-check" style={{ marginTop: 16 }}>
                     <input
@@ -248,10 +237,15 @@ export default function SignupGate({ children }: { children: ReactNode }) {
                 )}
 
                 <button
-                  className="cs-btn cs-btn--primary cs-btn--block"
+                  className="cs-btn cs-btn--primary cs-btn--block cs-submit"
                   style={{ marginTop: 20 }}
                   onClick={submit}
-                  disabled={busy || (!user && (!email.trim() || password.length < 12)) || (needsConsent && !consent)}
+                  data-busy={busy}
+                  disabled={
+                    busy ||
+                    (!user && (!isEmailShaped(email) || password.length < MIN_PASSWORD)) ||
+                    (needsConsent && !consent)
+                  }
                 >
                   {busy ? '처리 중…' : user ? '설정 저장하기' : loginMode ? '로그인하고 이어가기' : '계정 만들고 이어가기'}
                 </button>

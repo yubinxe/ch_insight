@@ -2059,3 +2059,209 @@
     padding: var(--s5) var(--s5) var(--s4);
   }
 }
+
+/* ── 루틴 ────────────────────────────────────────────────────
+   자동화 화면은 "무엇이 언제 돌고, 어떤 규칙이며, 실제로 어떻게 됐는가"
+   세 가지를 같은 지면에서 볼 수 있어야 한다.
+   실행 이력을 접어두면 아무도 자동화를 믿지 않는다.              */
+.rt-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.rt-title {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+.rt-purpose {
+  font-size: var(--fs-body);
+  color: var(--ink-2);
+  line-height: 1.65;
+  margin: 8px 0 0;
+  max-width: 62ch;
+}
+.rt-state {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.rt-state__item {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.rt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--s4);
+  margin-top: var(--s4);
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .rt-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rt-conf {
+  margin: 0;
+}
+.rt-conf__row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.rt-conf__row:last-child {
+  border-bottom: 0;
+}
+.rt-conf dt {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.rt-conf dd {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  line-height: 1.6;
+}
+.rt-cron {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--bg-sub);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+.rt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rt-tag {
+  padding: 4px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  background: var(--bg-sub);
+}
+
+/* 토글 — 켜고 끈 상태가 손에 잡히게 */
+.rt-switch {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 99px;
+  border: 1px solid var(--rule);
+  background: var(--bg-sub);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.22s var(--ease-out), border-color 0.22s var(--ease-out);
+}
+.rt-switch[aria-checked='true'] {
+  background: var(--pos);
+  border-color: var(--pos);
+}
+.rt-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 99px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(20, 17, 12, 0.25);
+  transition: transform 0.22s var(--ease-out);
+}
+.rt-switch[aria-checked='true'] .rt-switch__knob {
+  transform: translateX(20px);
+}
+
+.rt-instruction {
+  margin: 0;
+  font-family: inherit;
+  font-size: var(--fs-body);
+  line-height: 1.85;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+/* 실행 이력 */
+.rt-runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rt-run {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.rt-run:last-child {
+  border-bottom: 0;
+}
+.rt-run__mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  margin-top: 7px;
+  background: var(--ink-3);
+}
+.rt-run[data-status='SUCCESS'] .rt-run__mark { background: var(--pos); }
+.rt-run[data-status='FAILED'] .rt-run__mark { background: var(--hot); }
+.rt-run[data-status='SKIPPED'] .rt-run__mark { background: var(--warn); }
+.rt-run[data-status='RUNNING'] .rt-run__mark {
+  background: var(--accent);
+  animation: rtPulse 1.4s ease-in-out infinite;
+}
+@keyframes rtPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.rt-run__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rt-run__name {
+  font-size: var(--fs-body);
+  font-weight: 650;
+  color: var(--ink);
+}
+.rt-run__meta {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+.rt-run__summary {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: 1.6;
+  margin: 7px 0 0;
+  word-break: keep-all;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-switch,
+  .rt-switch__knob { transition: none; }
+  .rt-run[data-status='RUNNING'] .rt-run__mark { animation: none; }
+}
