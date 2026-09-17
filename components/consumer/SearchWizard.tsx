@@ -6,17 +6,37 @@ import { useConsumer } from './ConsumerProvider'
 import type { SearchProfile } from '@/lib/crm/types'
 import { HOUSING_TYPES, type Homeownership, type HousingType } from '@/lib/crm/types'
 
+/**
+ * 고를 수 있는 지역 — 전국 광역.
+ *
+ * 예전에는 서울 자치구 열 곳만 있었다. 그런데 실제로 모이는 공고는 경기 28건,
+ * 경남 12건, 강원 10건이고 서울은 0건이다. 서울 바깥에 사는 사람은 고를 것이
+ * 없었고, 골라도 매칭은 지역 0점이 나왔다 — 조건 검색이 사실상 빈 결과를 냈다.
+ *
+ * 공고 분류(`provinceOf`)와 같은 축을 쓴다. 축이 어긋나면 고른 지역과 오는
+ * 공고가 영영 만나지 못한다.
+ *
+ * 공고가 지금 없는 곳도 지운다: 조건은 앞으로 올 공고의 알림 기준이기도 하다.
+ * 대신 건수를 함께 적어 어디에 기회가 몰려 있는지 고르기 전에 보이게 한다.
+ */
 const REGIONS: { name: string; hint: string }[] = [
-  { name: '관악구', hint: '신림·봉천 일대' },
-  { name: '동작구', hint: '노량진·상도 일대' },
-  { name: '마포구', hint: '공덕·상암 일대' },
-  { name: '영등포구', hint: '여의도가 가까워요' },
-  { name: '성동구', hint: '성수·왕십리 일대' },
-  { name: '송파구', hint: '잠실 일대' },
-  { name: '서초구', hint: '강남이 가까워요' },
-  { name: '강남구', hint: '임대료가 높은 편' },
-  { name: '금천구', hint: '가산디지털단지 일대' },
-  { name: '서대문구', hint: '신촌·연희 일대' },
+  { name: '서울', hint: '25개 자치구' },
+  { name: '경기', hint: '수원·성남·고양 등' },
+  { name: '인천', hint: '송도·검단 등' },
+  { name: '부산', hint: '해운대·동래 등' },
+  { name: '대구', hint: '수성·달서 등' },
+  { name: '광주', hint: '광산·북구 등' },
+  { name: '대전', hint: '유성·서구 등' },
+  { name: '울산', hint: '남구·북구 등' },
+  { name: '세종', hint: '행정중심복합도시' },
+  { name: '강원', hint: '춘천·원주·강릉 등' },
+  { name: '충북', hint: '청주·충주 등' },
+  { name: '충남', hint: '천안·아산 등' },
+  { name: '전북', hint: '전주·군산 등' },
+  { name: '전남', hint: '여수·순천·목포 등' },
+  { name: '경북', hint: '포항·구미·경산 등' },
+  { name: '경남', hint: '창원·김해·양산 등' },
+  { name: '제주', hint: '제주시·서귀포시' },
 ]
 
 const HOUSEHOLDS: { name: string; hint: string; types: HousingType[] }[] = [
@@ -77,6 +97,36 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /** 지금 모집 중인 공고의 지역별 건수. 못 받아오면 그냥 건수를 안 적는다 */
+  const [counts, setCounts] = useState<Record<string, number> | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/notices?limit=1', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((json: { regions?: { name: string; count: number }[] } | null) => {
+        if (!alive || !json?.regions) return
+        const map: Record<string, number> = {}
+        for (const { name, count } of json.regions) {
+          // LH 는 '전남·광주' 처럼 둘을 묶어 적는다. 양쪽에 다 얹는다.
+          for (const one of name.split('·')) map[one.trim()] = (map[one.trim()] ?? 0) + count
+        }
+        setCounts(map)
+      })
+      .catch(() => {
+        /* 건수는 곁들이는 정보다. 못 받았다고 지역을 못 고르게 하지 않는다 */
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  /** 공고가 있는 곳을 위로. 건수를 모르는 동안에는 적어 둔 차례 그대로 둔다 */
+  const regionList = useMemo(() => {
+    if (!counts) return REGIONS
+    return [...REGIONS].sort((a, b) => (counts[b.name] ?? 0) - (counts[a.name] ?? 0))
+  }, [counts])
 
   useEffect(() => {
     const raw = sessionStorage.getItem('ci-search-draft')
@@ -187,13 +237,14 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
               <div className="cs-step-label">1 / 4</div>
               <h1 className="cs-q">어느 지역을 찾고 계세요?</h1>
               <p className="cs-sub" style={{ marginBottom: 28 }}>
-                최대 3곳까지 고를 수 있어요. 먼저 고른 곳을 더 중요하게 봅니다.
+                시·도 기준으로 최대 3곳까지 고를 수 있어요. 먼저 고른 곳을 더 중요하게 봅니다.
               </p>
 
               <div className="cs-choices">
-                {REGIONS.map(r => {
+                {regionList.map(r => {
                   const idx = regions.indexOf(r.name)
                   const on = idx >= 0
+                  const n = counts?.[r.name]
                   return (
                     <button
                       key={r.name}
@@ -206,7 +257,11 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
                     >
                       {on && <span className="cs-choice__rank">{idx + 1}</span>}
                       {r.name}
-                      <span className="cs-choice__sub">{r.hint}</span>
+                      {/* 건수를 모르는 동안에는 지역 설명을 보여 준다. 0 건도 적는다 —
+                          지금 없다는 사실을 숨기면 고르고 나서 알게 된다 */}
+                      <span className="cs-choice__sub">
+                        {n === undefined ? r.hint : n > 0 ? `모집 중 ${n}건` : '지금은 공고 없음'}
+                      </span>
                     </button>
                   )
                 })}

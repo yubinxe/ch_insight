@@ -1,3 +1,4 @@
+import { provinceOf } from '@/lib/consumer/classify'
 import type { Customer, Property } from '../types'
 
 /** 탐색에는 확인하지 않은 연령·소득·가구 사실을 만들지 않는다. */
@@ -90,7 +91,13 @@ export interface Candidate {
   excludedBy: ('DEPOSIT' | 'RENT' | 'CLOSED')[]
 }
 
-/** 인접 생활권 — 1순위가 아니어도 부분 점수를 준다 */
+/**
+ * 인접 생활권 — 1순위가 아니어도 부분 점수를 준다.
+ *
+ * 아래 자치구 표는 마법사가 서울 자치구만 고르게 하던 시절의 것이다. 지금은
+ * 광역을 고르므로 새로 저장되는 조건에는 쓰이지 않지만, 그때 저장해 둔 조건이
+ * 아직 남아 있어 그대로 둔다.
+ */
 const NEARBY: Record<string, string[]> = {
   관악구: ['동작구', '금천구', '영등포구', '서초구'],
   동작구: ['관악구', '영등포구', '서초구', '용산구'],
@@ -102,6 +109,35 @@ const NEARBY: Record<string, string[]> = {
   영등포구: ['동작구', '관악구', '마포구', '금천구'],
   금천구: ['관악구', '영등포구'],
   서대문구: ['마포구', '은평구'],
+}
+
+/**
+ * 광역끼리 맞닿은 관계.
+ *
+ * 공고는 거의 광역 단위로 온다 — 경기 28건, 경남 12건, 강원 10건. 자치구
+ * 인접표만 있던 동안에는 경기를 희망해도 인접 점수가 붙을 데가 없었다.
+ *
+ * 육지로 이어진 곳만 적는다. 제주는 빈 배열이다 — 없는 이웃을 지어내면
+ * 배로 몇 시간 걸리는 곳이 "인접 생활권"이 된다.
+ */
+const NEARBY_PROVINCE: Record<string, string[]> = {
+  서울: ['경기', '인천'],
+  인천: ['서울', '경기'],
+  경기: ['서울', '인천', '강원', '충북', '충남'],
+  강원: ['경기', '충북', '경북'],
+  충북: ['경기', '강원', '충남', '대전', '세종', '경북', '전북'],
+  충남: ['경기', '충북', '대전', '세종', '전북'],
+  대전: ['충남', '충북', '세종'],
+  세종: ['대전', '충남', '충북'],
+  전북: ['충남', '충북', '전남', '광주', '경북', '경남'],
+  전남: ['전북', '광주', '경남'],
+  광주: ['전남', '전북'],
+  경북: ['강원', '충북', '전북', '대구', '경남', '울산'],
+  대구: ['경북', '경남'],
+  경남: ['전북', '전남', '경북', '대구', '부산', '울산'],
+  부산: ['경남', '울산'],
+  울산: ['부산', '경남', '경북'],
+  제주: [],
 }
 
 /**
@@ -125,6 +161,28 @@ const PROVINCE_OF: Record<string, string> = Object.fromEntries(
 /** 전국 단위 공고 — 지역으로 걸러내면 안 되지만 "내 동네"라고 말할 수도 없다 */
 const NATIONWIDE = '전국'
 
+/**
+ * 공고가 걸쳐 있는 광역들.
+ *
+ * `provinceOf` 는 '평택시' 를 '경기' 로 접어 준다 — 공고가 시·군·구로 와도
+ * 광역으로 읽힌다. LH 지역본부는 '전남·광주' 처럼 둘을 묶어 적으므로 갈라서
+ * 둘 다 본다. 전남을 희망한 사람에게 '전남·광주' 공고가 남이 되면 안 된다.
+ */
+function provincesOf(property: Pick<Property, 'region' | 'district'>): string[] {
+  return provinceOf(property)
+    .split('·')
+    .map(t => t.trim())
+    .filter(Boolean)
+}
+
+/**
+ * 예전 마법사는 서울 자치구만 고르게 했다. 그때 저장한 조건을 광역으로 읽어
+ * 준다 — 고친 뒤에 조건을 다시 저장하지 않은 사람이 빈 결과를 보지 않도록.
+ */
+function asProvince(pref: string): string {
+  return PROVINCE_OF[pref] ?? pref
+}
+
 /** 희망지역과 공고 지역이 같은 광역에 속하는가 (어느 쪽이 광역이든) */
 function sameProvince(pref: string, region: string): string | null {
   if (PROVINCE_OF[pref] === region) return region
@@ -136,10 +194,22 @@ function sameProvince(pref: string, region: string): string | null {
  * 후보 목록에 넣을 만한 지역인가.
  * 정확히 같거나, 인접 생활권이거나, 같은 광역이면 통과시킨다.
  */
-export function regionRelated(prefs: string[], region: string): boolean {
+export function regionRelated(
+  prefs: string[],
+  property: Pick<Property, 'region' | 'district'>,
+): boolean {
+  const region = (property.region ?? '').trim()
   if (region === NATIONWIDE) return true
   if (prefs.includes(region)) return true
   if (prefs.some(r => (NEARBY[r] ?? []).includes(region))) return true
+
+  // 공고를 광역으로 접어 견준다. 희망지역이 예전 자치구 값이어도 광역으로 읽는다.
+  const where = provincesOf(property)
+  if (where.includes(NATIONWIDE)) return true
+  const wanted = prefs.map(asProvince)
+  if (wanted.some(r => where.includes(r))) return true
+  if (wanted.some(r => (NEARBY_PROVINCE[r] ?? []).some(n => where.includes(n)))) return true
+
   return prefs.some(r => sameProvince(r, region) !== null)
 }
 
@@ -176,11 +246,25 @@ export function formatMan(man: number) {
 
 function regionFit(customer: SearchConditions, property: Property) {
   const prefs = customer.preferredRegions
+  // 시·군·구까지 똑같이 적힌 경우가 가장 정확하다. 먼저 본다.
   if (prefs[0] === property.region) return { score: 100, kind: 'FIRST' as const }
   if (prefs.includes(property.region)) return { score: 85, kind: 'LISTED' as const }
   const near = prefs.find(r => (NEARBY[r] ?? []).includes(property.region))
   if (near) return { score: 50, kind: 'NEARBY' as const, via: near }
-  if (property.region === NATIONWIDE) return { score: 40, kind: 'NATIONWIDE' as const }
+
+  // 공고는 거의 광역으로 온다. 희망지역도 광역으로 접어 견준다.
+  const where = provincesOf(property)
+  const wanted = prefs.map(asProvince)
+  if (where.includes(wanted[0])) return { score: 100, kind: 'FIRST' as const }
+  if (wanted.some(r => where.includes(r))) return { score: 85, kind: 'LISTED' as const }
+
+  if (property.region === NATIONWIDE || where.includes(NATIONWIDE)) {
+    return { score: 40, kind: 'NATIONWIDE' as const }
+  }
+
+  const nearProvince = wanted.find(r => (NEARBY_PROVINCE[r] ?? []).some(n => where.includes(n)))
+  if (nearProvince) return { score: 50, kind: 'NEARBY' as const, via: nearProvince }
+
   // 광역 단위 공고 — 관련은 있지만 같은 동네라고 말할 수 없다
   for (const r of prefs) {
     const province = sameProvince(r, property.region)

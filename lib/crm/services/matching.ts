@@ -57,7 +57,7 @@ export function findCandidatesForCustomer(
 
   const primary = all
     .filter(r => r.candidate.tier === 'PRIMARY')
-    .filter(r => regionRelated(customer.preferredRegions, r.property.region))
+    .filter(r => regionRelated(customer.preferredRegions, r.property))
     .filter(
       r =>
         !customer.preferredHousingTypes.length ||
@@ -73,7 +73,7 @@ export function findCandidatesForCustomer(
 
   const relaxed = all
     .filter(r => r.candidate.tier === 'RELAXED')
-    .filter(r => regionRelated(customer.preferredRegions, r.property.region))
+    .filter(r => regionRelated(customer.preferredRegions, r.property))
     .filter(r => !r.candidate.excludedBy.includes('CLOSED'))
     .filter(r => r.candidate.fit.preferenceScore >= 50)
     .sort(sortByOverage)
