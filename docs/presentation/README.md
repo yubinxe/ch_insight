@@ -1,43 +1,55 @@
 # 집캐치 발표 자료
 
-제품 기준 브랜치: `feat/housing-opportunity-crm` (현재 사실상 main)
-
-| 파일 | 설명 |
+| 파일 | 내용 |
 |---|---|
-| `집캐치_IR.pptx` | **IR 핵심 요약 10장** — 발표 7분 + Q&A 5분 |
-| `집캐치_발표시나리오.md` | 슬라이드별 대사 · 시간 배분 · Q&A 5종 |
-| `build-ir.js` | PPTX 생성 스크립트 |
-
-> 구버전 18장 덱(`집캐치_발표자료.pptx`)은 제거했다. 당첨 확률 78% 등
-> 현재 제품이 더 이상 제공하지 않는 내용을 담고 있었다.
-
-## 덱 구성 (10장)
-
-표지 → 문제 → 솔루션(Before/After) → 소비자 흐름 6단계 → **판정 4원칙** →
-정직성(만들지 않는 것) → 데이터 출처 → Claude Routines 12개 → 수익 모델 → 클로징
-
-## 디자인 — 제품 규격 그대로
-
-`docs/strategy/2026-09-14-consumer-design-direction.md` 를 따른다.
-
-| 요소 | 값 |
-|---|---|
-| 지면 | `#F4F1EB` 한지 계열 따뜻한 중성 |
-| 카드 | `#FFFFFF` |
-| 제목 | `#14110C` 먹 |
-| 본문 | `#3B352C` · 보조 `#6F6859` · 괘선 `#E2DBCF` |
-| 채색 | 주묵 `#A83A20` 하나뿐 — 인장처럼 아껴 찍는다 (섹션번호 · 마감 · 강조) |
-| 상태색 | 충족 `#3D5F43` · 확인필요 `#7D6320` |
-| 시그니처 | 섹션 인덱스 번호(`01`, `001`)와 괘선 |
-
-**주 행동에 색을 쓰지 않는다.** 화면에서 가장 붉은 것은 항상 마감이다.
+| `집캐치_IR.pptx` | IR 덱 19면 (16:9) |
+| `build-ir.js` | 덱 생성 스크립트 |
+| `집캐치_발표시나리오.md` | 면별 대사 · 동선 · Q&A |
+| `assets/` | 오프닝 사진 6장 (assets/README.md 참조) |
 
 ## 재생성
 
 ```bash
+cd docs/presentation
 npm i pptxgenjs
-node docs/presentation/build-ir.js docs/presentation/집캐치_IR.pptx
+node build-ir.js 집캐치_IR.pptx
 
-# Pretendard 미설치 환경
-DECK_FONT="맑은 고딕" node docs/presentation/build-ir.js docs/presentation/집캐치_IR.pptx
+# Pretendard 미설치 PC
+DECK_FONT="맑은 고딕" node build-ir.js 집캐치_IR.pptx
 ```
+
+## 구성
+
+| 면 | 구간 | 내용 |
+|---|---|---|
+| 1~3 | OPENING | 「이 세 가지의 공통점은 무엇입니까」 — 사진 3장 순차 노출 |
+| 4 | ANSWER | 청약 |
+| 5~7 | WHY IT MATTERS | 제도(추첨제) · 시장(하락장) · 정책(공공임대) 순차 노출 |
+| 8 | BUT | 그런데 청약은, 너무 복잡합니다 |
+| 9 | FRICTION | 2개 출처 · 6개 축 · 84점 만점 — 공감 슬라이드 |
+| 10 | SO WE BUILT IT | 그래서 저희는, 만들었습니다 |
+| 11 | THE SERVICE | 집캐치 표지 |
+| 12 | PROBLEM | 선별 기준의 부재 |
+| 13 | SOLUTION | 조건 입력 1회 → 지원 가능 후보 |
+| 14 | USER JOURNEY | 6단계 단일 흐름 |
+| 15 | DATA INTEGRITY | 신뢰 훼손 요인 사전 차단 |
+| 16 | DATA SOURCE | 분양 · 임대 통합 수집 |
+| 17 | OPERATIONS | Claude Routines 12종 |
+| 18 | BUSINESS MODEL | 3단계 수익화 |
+| 19 | CLOSING | — |
+
+## 디자인 규격
+
+컨설팅 덱 규격 — 액션 타이틀 · 괘선 · 하단 결론 한 줄 · 출처 · 페이지 번호.
+
+| 요소 | 값 |
+|---|---|
+| 배경 | `#FFFFFF` / 강조면 `#0B1F2A` |
+| 제목 | `#111A22` · 27pt Bold · 자간 -0.4 |
+| 본문 | `#3C4650` · 12.5pt · 행간 1.42 |
+| 보조 · 출처 | `#7C8791` · 8.5~11.5pt |
+| 괘선 | `#D3D9DE` / 면 분할 `#EEF1F3` |
+| 강조 (단일) | `#A83A20` |
+| 여백 | 좌우 0.78in · 제목 괘선 y=2.16 · 본문 2.42~6.28 |
+
+강조색은 눈썹 라벨 · 숫자 · 결론 마커에만 사용한다. 그라디언트 · 그림자 · 라운드 코너는 쓰지 않는다.
