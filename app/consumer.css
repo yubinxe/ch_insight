@@ -4267,3 +4267,74 @@ a.cs-pin:hover {
 .cs-sec-index {
   font-weight: 700;
 }
+
+/* ═════════════════════════════════════════════════════════
+   표 — 주택형별 공급
+
+   숫자를 읽히게 하는 표다. 세로 괘선은 긋지 않는다. 칸마다 선을 두르면
+   읽는 눈이 칸에 갇혀 열을 따라 내려가지 못한다. 가로 괘선만 옅게 둔다.
+
+   금액과 세대는 오른쪽에 맞춘다. 자릿수가 세로로 맞아야 크기가 눈에 들어온다.
+   ═════════════════════════════════════════════════════════ */
+.cs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+
+.cs-table th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  padding: 0 12px 10px 0;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.cs-table td {
+  padding: 14px 12px 14px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--body);
+  vertical-align: baseline;
+}
+
+.cs-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* 마지막 열은 오른쪽 여백을 비운다 — 표가 지면 끝에서 뜨지 않게 */
+.cs-table th:last-child,
+.cs-table td:last-child {
+  padding-right: 0;
+}
+
+.cs-table__r {
+  text-align: right;
+}
+
+/* 주택형 코드. 이 표에서 행을 가리키는 이름이라 한 단 세운다 */
+.cs-table__key {
+  font-weight: 700;
+  color: var(--title);
+  white-space: nowrap;
+}
+
+/* 공급면적 아래 붙는 전용면적 — 같은 칸 안의 보조 값 */
+.cs-table__sub {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 좁은 화면에서는 표가 지면을 넘는다. 잘라내지 않고 옆으로 밀리게 둔다 */
+@media (max-width: 720px) {
+  .cs-models {
+    overflow-x: auto;
+  }
+  .cs-table {
+    min-width: 520px;
+  }
+}

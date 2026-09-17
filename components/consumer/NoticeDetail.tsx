@@ -10,11 +10,21 @@ import SaveButton from './SaveButton'
 import { useConsumer } from './ConsumerProvider'
 import { useSignupGate } from './SignupGate'
 
+interface SupplyModel {
+  name: string
+  supplyArea: number | null
+  exclusiveArea: number | null
+  households: number | null
+  topAmount: number | null
+  perPyeong: number | null
+}
+
 interface DetailResponse {
   property: Property
   urgency: UrgencyInfo
   candidate: Candidate | null
   schedule: Task[]
+  supplyModels?: SupplyModel[]
 }
 
 export default function NoticeDetail({ id }: { id: string }) {
@@ -69,6 +79,7 @@ export default function NoticeDetail({ id }: { id: string }) {
   }
 
   const { property, urgency, candidate, schedule } = data
+  const supplyModels = data.supplyModels ?? []
   /**
    * 예시 공고인가.
    *
@@ -162,6 +173,55 @@ export default function NoticeDetail({ id }: { id: string }) {
           </div>
         )}
       </div>
+
+      {/* 주택형별 공급 — 총계만으로는 "내가 넣을 평형이 몇 세대이고 얼마인가"에
+          답할 수 없다. 답하지 못하면 결국 공고문 PDF 를 열게 된다. */}
+      {supplyModels.length > 0 && (
+        <section style={{ marginTop: 32 }}>
+          <h2 className="cs-section-title" style={{ fontSize: 24 }}>
+            주택형별 공급
+          </h2>
+          <div className="cs-card cs-models" style={{ marginTop: 18 }}>
+            <table className="cs-table">
+              <thead>
+                <tr>
+                  <th>주택형</th>
+                  <th>공급면적</th>
+                  <th className="cs-table__r">분양가</th>
+                  <th className="cs-table__r">평당</th>
+                  <th className="cs-table__r">세대</th>
+                </tr>
+              </thead>
+              <tbody>
+                {supplyModels.map(m => (
+                  <tr key={m.name}>
+                    <td className="cs-table__key">{m.name}</td>
+                    <td className="cs-num">
+                      {m.supplyArea === null ? '—' : `${m.supplyArea}㎡`}
+                      {m.exclusiveArea !== null && (
+                        <span className="cs-table__sub">전용 {m.exclusiveArea}㎡</span>
+                      )}
+                    </td>
+                    <td className="cs-num cs-table__r">
+                      {m.topAmount === null ? '공고문 확인' : formatMan(m.topAmount)}
+                    </td>
+                    <td className="cs-num cs-table__r">
+                      {m.perPyeong === null ? '—' : `${m.perPyeong.toLocaleString()}만원`}
+                    </td>
+                    <td className="cs-num cs-table__r">
+                      {m.households === null ? '—' : `${m.households.toLocaleString()}`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="cs-note" style={{ marginTop: 14 }}>
+              분양가는 주택형별 최고가 기준이고, 평당은 공급면적으로 나눈 값입니다. 층·동별 금액과
+              옵션은 공고문에서 확인해 주세요.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* 내 조건과의 비교 */}
       {candidate && (

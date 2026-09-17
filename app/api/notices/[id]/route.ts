@@ -1,5 +1,6 @@
 import { propertyById } from '@/lib/crm/store'
 import { findOfficialProperty } from '@/lib/consumer/official'
+import { fetchSupplyModels } from '@/lib/adapters/applyhome-models'
 import { checkUrgency, buildCandidate } from '@/lib/crm/services/scoring'
 import { buildTasks } from '@/lib/crm/services/scheduling'
 import { resolveSession } from '@/lib/consumer/session'
@@ -39,6 +40,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     // 준비 일정 미리보기 — 공식 기한과 권장 준비일을 구분해 보여준다.
     const schedule = buildTasks(property, { applicationId: `preview:${property.id}` })
 
+    /**
+     * 주택형별 공급. 청약홈 분양에만 있다 — LH 임대는 이 API 에 나오지 않는다.
+     * 없거나 실패하면 빈 배열이고, 화면은 그 자리를 접는다.
+     */
+    const supply =
+      property.dataOrigin === 'OFFICIAL' && property.source.includes('청약홈')
+        ? await fetchSupplyModels(property.announcementId)
+        : { models: [], ok: true, reason: null }
+
     track(session, 'notice_viewed', { propertyId: property.id })
 
     return Response.json({
@@ -48,6 +58,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       schedule,
       budget: candidate?.budget ?? null,
       dataOrigin: property.dataOrigin,
+      supplyModels: supply.models,
     })
   } catch (err) {
     return Response.json(
