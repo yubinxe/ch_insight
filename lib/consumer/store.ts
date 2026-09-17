@@ -91,7 +91,17 @@ function deserialize(saved: ReturnType<typeof serialize>): ConsumerState {
   }
 }
 
-/** 파일로 내보낸다. 읽기 전용 파일시스템이면 한 번만 확인하고 접는다 */
+/**
+ * 파일로 내보낸다. 쓸 수 없는 환경이면 한 번만 확인하고 접는다.
+ *
+ * 예전에는 EROFS·EACCES·EPERM 세 가지만 접고 나머지는 그대로 던졌다.
+ * 그런데 Vercel 런타임은 `mkdir /var/task/.data` 에 **ENOENT** 를 낸다.
+ * 목록에 없는 코드라 예외가 그대로 올라가 `/api/me` 가 500 을 냈고,
+ * 세션을 만드는 모든 요청 — 로그인·관심공고·조건 저장·알림 — 이 함께 죽었다.
+ *
+ * 파일 저장은 로컬 개발 편의일 뿐이다. 그 편의가 실패했다고 요청을 죽이는
+ * 것은 어떤 경우에도 옳지 않다. 코드를 가려 받지 않고 전부 접는다.
+ */
 function persistToFile(json: string) {
   if (globalRef.__myhomeplzFsBlocked) return
   try {
@@ -99,16 +109,12 @@ function persistToFile(json: string) {
     writeFileSync(`${dataFile}.tmp`, json, { mode: 0o600 })
     renameSync(`${dataFile}.tmp`, dataFile)
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code
-    if (code === 'EROFS' || code === 'EACCES' || code === 'EPERM') {
-      globalRef.__myhomeplzFsBlocked = true
-      console.warn(
-        `[consumer] 파일 저장 불가(${code}) — 이 환경에서는 파일로 보관하지 않습니다.` +
-          (isSupabaseConfigured() ? '' : ' Supabase 도 없어 메모리에만 남습니다.'),
-      )
-      return
-    }
-    throw err
+    globalRef.__myhomeplzFsBlocked = true
+    const code = (err as NodeJS.ErrnoException).code ?? 'UNKNOWN'
+    console.warn(
+      `[consumer] 파일 저장 불가(${code}) — 이 환경에서는 파일로 보관하지 않습니다.` +
+        (isSupabaseConfigured() ? '' : ' Supabase 도 없어 메모리에만 남습니다.'),
+    )
   }
 }
 
