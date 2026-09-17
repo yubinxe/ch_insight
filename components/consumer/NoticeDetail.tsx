@@ -7,6 +7,7 @@ import { formatMan } from '@/lib/crm/services/scoring'
 import type { Property, Task } from '@/lib/crm/types'
 import { statusBadge } from './NoticeCard'
 import SaveButton from './SaveButton'
+import NoticeCalendar, { marksFrom } from './NoticeCalendar'
 import { useConsumer } from './ConsumerProvider'
 import { useSignupGate } from './SignupGate'
 
@@ -525,6 +526,10 @@ export default function NoticeDetail({ id }: { id: string }) {
           공고 일정{isSample && ' · 예시 데이터'}
         </h2>
         <div className="cs-card" style={{ marginTop: 18 }}>
+          {/* 날짜를 읽는 일과 기간을 가늠하는 일은 다르다. 사람이 하려는 것은 뒤쪽이라
+              목록 위에 달력을 둔다 */}
+          <NoticeCalendar marks={marksFrom(property, recommended)} />
+
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 2 }}>
             {official.map(t => (
               <li
