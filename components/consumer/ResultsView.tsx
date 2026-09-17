@@ -80,6 +80,12 @@ export default function ResultsView() {
     )
   }
 
+  const OWNERSHIP_LABEL: Record<string, string> = {
+    NONE: '무주택',
+    ONE: '1주택',
+    MANY: '2주택 이상',
+  }
+
   const unknownLabel: Record<string, string> = {
     maxDeposit: '보증금 미정',
     maxMonthlyRent: '월세 미정',
@@ -113,6 +119,22 @@ export default function ResultsView() {
           {!profile.unknownFields.includes('minArea') && (
             <span className="cs-summary__chip">
               <span>면적</span> {profile.minArea}㎡ 이상
+            </span>
+          )}
+          {/* 자격 항목은 적어주신 것만 붙인다 — 비운 칸은 비운 채로 보인다 */}
+          {profile.homeownership && (
+            <span className="cs-summary__chip">
+              <span>주택</span> {OWNERSHIP_LABEL[profile.homeownership]}
+            </span>
+          )}
+          {profile.homelessYears !== null && (
+            <span className="cs-summary__chip">
+              <span>무주택</span> {profile.homelessYears}년
+            </span>
+          )}
+          {profile.residencyYears !== null && (
+            <span className="cs-summary__chip">
+              <span>거주</span> {profile.residencyYears}년
             </span>
           )}
           {profile.unknownFields.map(f => (

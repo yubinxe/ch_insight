@@ -9,11 +9,19 @@ const NAV = [
   { href: '/notices', label: '공고 찾기' },
   { href: '/guide', label: '청약 가이드' },
   { href: '/saved', label: '관심공고' },
+  { href: '/score', label: '가점 계산' },
+  { href: '/stats', label: '경쟁률·당첨통계' },
 ]
 
 export default function ConsumerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { user, savedCount } = useConsumer()
+
+  /** 로그인·회원가입 모두 보던 자리로 돌아온다 */
+  const authHref = (mode: 'login' | 'signup') => {
+    const back = pathname && pathname !== '/login' ? `&next=${encodeURIComponent(pathname)}` : ''
+    return `/login?mode=${mode}${back}`
+  }
 
   return (
     <div className="cs">
@@ -61,13 +69,17 @@ export default function ConsumerShell({ children }: { children: ReactNode }) {
                 {user.nickname}님
               </Link>
             ) : (
-              // 보던 자리를 들고 간다. 로그인 뒤 고정된 페이지로 밀어내지 않는다
-              <Link
-                href={pathname && pathname !== '/login' ? `/login?next=${encodeURIComponent(pathname)}` : '/login'}
-                className="cs-btn cs-btn--sm cs-btn--ghost"
-              >
-                로그인
-              </Link>
+              <>
+                {/* 보던 자리를 들고 간다. 로그인 뒤 고정된 페이지로 밀어내지 않는다.
+                    로그인은 글자만, 회원가입은 테두리를 둬 둘을 구분한다 —
+                    같은 모양으로 붙여두면 어느 쪽이 처음인지 읽히지 않는다. */}
+                <Link href={authHref('login')} className="cs-btn cs-btn--sm cs-btn--text">
+                  로그인
+                </Link>
+                <Link href={authHref('signup')} className="cs-btn cs-btn--sm cs-btn--ghost">
+                  회원가입
+                </Link>
+              </>
             )}
             <Link href="/analyze" className="cs-btn cs-btn--sm cs-btn--primary">
               내 기회 찾기

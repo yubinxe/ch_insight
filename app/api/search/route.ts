@@ -6,11 +6,25 @@ import { listOfficialProperties } from '@/lib/consumer/official'
 import * as repo from '@/lib/db/repo'
 import { trackBehavior } from '@/lib/services/pipeline'
 import { findCandidatesForCustomer } from '@/lib/crm/services/matching'
-import { HOUSING_TYPES, type HousingType, type SearchProfile } from '@/lib/crm/types'
+import {
+  HOUSING_TYPES,
+  type Homeownership,
+  type HousingType,
+  type SearchProfile,
+} from '@/lib/crm/types'
 
 export const dynamic = 'force-dynamic'
 
 const HOUSEHOLDS = ['1인가구', '신혼부부', '2인가구', '다자녀', '한부모'] as const
+const OWNERSHIP: Homeownership[] = ['NONE', 'ONE', 'MANY']
+
+/** 연수·인원 — 범위를 벗어나면 잘라 담는다. 모르면 null 을 지킨다 */
+function boundedInt(v: unknown, max: number) {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  if (!Number.isFinite(n)) return null
+  return Math.min(max, Math.max(0, Math.round(n)))
+}
 
 function positiveInt(v: unknown) {
   if (v === null || v === undefined || v === '') return null
@@ -56,10 +70,25 @@ export async function POST(req: NextRequest) {
     if (minArea === null) unknownFields.push('minArea')
     if (housingTypes.length === 0) unknownFields.push('housingTypes')
 
+    // 자격 항목은 사용자가 고른 것만 담는다. 비워두면 비운 채로 둔다 —
+    // 기본값을 채우면 화면이 "무주택 0년"을 사실처럼 보여주게 된다.
+    const homeownership: Homeownership | null = OWNERSHIP.includes(body.homeownership)
+      ? body.homeownership
+      : null
+    const homelessYears = boundedInt(body.homelessYears, 16)
+    const residencyYears = boundedInt(body.residencyYears, 30)
+    const accountYears = boundedInt(body.accountYears, 17)
+    const dependents = boundedInt(body.dependents, 6)
+
     const profile: SearchProfile = {
       regions,
       housingTypes,
       householdType,
+      homeownership,
+      homelessYears,
+      residencyYears,
+      accountYears,
+      dependents,
       // 미입력 시 상한을 두지 않는다 (사실처럼 보이는 기본값을 만들지 않는다)
       maxDeposit,
       maxMonthlyRent,

@@ -2528,3 +2528,286 @@ body:has(.cs-ticker) .cs-chat {
     --maxw: 1360px;
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+   가점 계산 — 왼쪽은 손으로 맞추고, 오른쪽은 결과가 따라온다
+   ───────────────────────────────────────────────────────── */
+.cs-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 32px;
+  align-items: start;
+}
+.cs-score__panel {
+  display: grid;
+  gap: 30px;
+}
+.cs-score__row {
+  display: grid;
+  gap: 10px;
+}
+.cs-score__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cs-score__label {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--title);
+}
+.cs-score__earned {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--title);
+}
+.cs-score__of {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.cs-score__control {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.cs-score__control .cs-range {
+  flex: 1;
+  min-width: 0;
+}
+.cs-score__value {
+  flex-shrink: 0;
+  min-width: 48px;
+  text-align: right;
+  font-weight: 700;
+  color: var(--title);
+}
+.cs-score__rule {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.cs-score__result {
+  display: grid;
+  gap: 20px;
+  position: sticky;
+  top: 92px;
+}
+/* 합계는 지면에서 가장 큰 숫자다. 먹 판 위에 올려 결과임을 분명히 한다 */
+.cs-score__total {
+  padding: 30px;
+  border-radius: var(--r-card);
+  background: var(--title);
+  color: var(--paper);
+}
+.cs-score__total-label {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--paper) 70%, transparent);
+}
+.cs-score__total-value {
+  margin-top: 8px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.cs-score__total-of {
+  margin-left: 8px;
+  font-size: 20px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--paper) 62%, transparent);
+}
+.cs-score__bar {
+  display: block;
+  height: 6px;
+  margin-top: 18px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--paper) 22%, transparent);
+  overflow: hidden;
+}
+.cs-score__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--paper);
+  transition: width 0.3s var(--ease);
+}
+.cs-score__split {
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.cs-score__headline {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--title);
+}
+/* 높다고 붉게 칠하지 않는다 — 이 지면에서 주묵은 마감의 것이다.
+   자료가 없을 때만 톤을 낮춰 "판단하지 않았음"을 드러낸다. */
+.cs-score__headline[data-band='insufficient'] {
+  color: var(--muted);
+}
+.cs-score__insight {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--body);
+}
+.cs-score__detail {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.cs-score__ref {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.cs-score__ref dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.cs-score__ref dd {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--title);
+}
+
+/* ─────────────────────────────────────────────────────────
+   경쟁률 · 당첨 통계
+   ───────────────────────────────────────────────────────── */
+.cs-stat__list {
+  display: grid;
+  gap: 2px;
+  border-top: 1px solid var(--line-ink);
+}
+.cs-stat__row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 132px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cs-stat__row--pair {
+  grid-template-columns: 96px minmax(0, 1fr);
+}
+.cs-stat__pair {
+  display: grid;
+  gap: 10px;
+}
+.cs-stat__name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--title);
+}
+.cs-stat__bar {
+  display: block;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.cs-stat__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  transition: width 0.35s var(--ease);
+}
+/* 당첨 줄만 주묵 — 신청과 당첨을 색으로 가른다 */
+.cs-stat__bar[data-tone='accent'] > span {
+  background: var(--accent);
+}
+.cs-stat__value {
+  text-align: right;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--title);
+}
+.cs-stat__unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+/* 미달은 경쟁률이 아니다. 숫자와 다른 무게로 적는다 */
+.cs-stat__under {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.cs-stat__meta {
+  grid-column: 2 / -1;
+  font-size: 13px;
+  color: var(--muted);
+}
+.cs-stat__row--pair .cs-stat__meta {
+  grid-column: auto;
+  display: block;
+  margin-top: 4px;
+}
+.cs-stat__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: var(--gap-card);
+}
+.cs-stat__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cs-stat__score {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--title);
+}
+.cs-stat__card-head + .cs-stat__score + .cs-stat__meta {
+  margin-top: 8px;
+}
+
+@media (max-width: 1000px) {
+  .cs-score {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-score__result {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .cs-stat__row,
+  .cs-stat__row--pair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .cs-stat__value {
+    text-align: left;
+  }
+  .cs-stat__meta {
+    grid-column: auto;
+  }
+  .cs-score__total-value {
+    font-size: 46px;
+  }
+  .cs-score__ref {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

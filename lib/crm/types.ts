@@ -251,6 +251,9 @@ export interface ActivityLog {
 // ──────────────────────────────────────────────────────────
 
 /** 탐색 단계에서 받는 조건. 자격 판정에 쓰는 정밀 정보는 여기에 넣지 않는다. */
+/** 주택 소유 상태 — 공고의 무주택 요건과 대조할 때 쓴다 */
+export type Homeownership = 'NONE' | 'ONE' | 'MANY'
+
 export interface SearchProfile {
   regions: string[]
   housingTypes: HousingType[]
@@ -258,6 +261,17 @@ export interface SearchProfile {
   maxDeposit: number | null
   maxMonthlyRent: number | null
   minArea: number | null
+  /* ── 자격·가점 항목. 모르면 null 로 두고 임의로 채우지 않는다 ── */
+  /** 무주택 여부 */
+  homeownership: Homeownership | null
+  /** 무주택 기간(년) — 가점 32점 항목 */
+  homelessYears: number | null
+  /** 해당지역 거주기간(년) — 순위·우선공급 판정에 쓰인다 */
+  residencyYears: number | null
+  /** 청약통장 가입기간(년) — 가점 17점 항목 */
+  accountYears: number | null
+  /** 부양가족 수(본인 제외) — 가점 35점 항목 */
+  dependents: number | null
   /** 사용자가 정하지 않은 항목은 임의로 채우지 않고 비워 둔다 */
   unknownFields: string[]
   updatedAt: string

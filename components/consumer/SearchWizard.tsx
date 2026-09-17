@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useConsumer } from './ConsumerProvider'
 import type { SearchProfile } from '@/lib/crm/types'
-import { HOUSING_TYPES, type HousingType } from '@/lib/crm/types'
+import { HOUSING_TYPES, type Homeownership, type HousingType } from '@/lib/crm/types'
 
 const REGIONS: { name: string; hint: string }[] = [
   { name: '관악구', hint: '신림·봉천 일대' },
@@ -35,7 +35,7 @@ const TYPE_HINT: Record<HousingType, string> = {
   신혼희망타운: '신혼부부를 위한 공급',
 }
 
-const TOTAL = 3
+const TOTAL = 4
 
 function manToKorean(man: number) {
   if (man >= 10000) {
@@ -65,6 +65,15 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
   const [unknown, setUnknown] = useState<Record<string, boolean>>({ deposit: initial?.unknownFields.includes('maxDeposit') ?? false, rent: initial?.unknownFields.includes('maxMonthlyRent') ?? false, area: initial?.unknownFields.includes('minArea') ?? false })
   const [household, setHousehold] = useState(initial?.householdType ?? '')
   const [types, setTypes] = useState<HousingType[]>(initial?.housingTypes ?? [])
+
+  /* ── 4단계: 자격·가점 항목. 고르지 않으면 null 을 지킨다 ── */
+  const [ownership, setOwnership] = useState<Homeownership | ''>(initial?.homeownership ?? '')
+  const [homelessYears, setHomelessYears] = useState(initial?.homelessYears ?? 0)
+  const [residencyYears, setResidencyYears] = useState(initial?.residencyYears ?? 0)
+  const [accountYears, setAccountYears] = useState(initial?.accountYears ?? 0)
+  const [dependents, setDependents] = useState(initial?.dependents ?? 0)
+  /** 자격 항목을 건드렸는지. 손대지 않았으면 0 이 아니라 "모름"으로 보낸다 */
+  const [touchedQual, setTouchedQual] = useState(false)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -111,6 +120,13 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
           maxDeposit: unknown.deposit ? null : deposit,
           maxMonthlyRent: unknown.rent ? null : rent,
           minArea: unknown.area ? null : area,
+          // 손대지 않은 자격 항목은 0 이 아니라 "모름"이다. 0 으로 보내면
+          // 화면이 "무주택 0년"을 사실처럼 보여주게 된다.
+          homeownership: ownership || null,
+          homelessYears: touchedQual ? homelessYears : null,
+          residencyYears: touchedQual ? residencyYears : null,
+          accountYears: touchedQual ? accountYears : null,
+          dependents: touchedQual ? dependents : null,
         }),
       })
       const json = await res.json().catch(() => null)
@@ -168,7 +184,7 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
           {/* ── 1단계 지역 ─────────────────────────── */}
           {step === 0 && (
             <>
-              <div className="cs-step-label">1 / 3</div>
+              <div className="cs-step-label">1 / 4</div>
               <h1 className="cs-q">어느 지역을 찾고 계세요?</h1>
               <p className="cs-sub" style={{ marginBottom: 28 }}>
                 최대 3곳까지 고를 수 있어요. 먼저 고른 곳을 더 중요하게 봅니다.
@@ -212,7 +228,7 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
           {/* ── 2단계 주거비 ───────────────────────── */}
           {step === 1 && (
             <>
-              <div className="cs-step-label">2 / 3</div>
+              <div className="cs-step-label">2 / 4</div>
               <h1 className="cs-q">주거비는 어느 정도 생각하세요?</h1>
               <p className="cs-sub" style={{ marginBottom: 8 }}>
                 입력하신 금액을 넘는 공고는 따로 구분해서 보여드려요.
@@ -326,7 +342,7 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
           {/* ── 3단계 가구·선호 ────────────────────── */}
           {step === 2 && (
             <>
-              <div className="cs-step-label">3 / 3</div>
+              <div className="cs-step-label">3 / 4</div>
               <h1 className="cs-q">어떤 가구이신가요?</h1>
               <p className="cs-sub" style={{ marginBottom: 28 }}>
                 선택은 건너뛰어도 괜찮아요. 가구 선택만으로 지원 자격이 확정되지는 않아요.
@@ -407,6 +423,91 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
 
               <div className="cs-form-nav">
                 <button className="cs-btn cs-btn--text" onClick={() => setStep(1)}>
+                  이전
+                </button>
+                <button className="cs-btn cs-btn--primary" onClick={() => setStep(3)}>
+                  다음
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── 4단계 자격·가점 ─────────────────────── */}
+          {step === 3 && (
+            <>
+              <div className="cs-step-label">4 / 4</div>
+              <h1 className="cs-q">자격을 가르는 항목도 알려주시겠어요?</h1>
+              <p className="cs-sub" style={{ marginBottom: 28 }}>
+                무주택 여부와 거주기간은 공고마다 요건이 다릅니다. 적어두시면 공고를 볼 때 무엇을 더
+                확인해야 하는지 함께 짚어 드리고, 가점 계산도 이 값으로 열려요.
+                <br />
+                전부 건너뛰셔도 후보는 그대로 보실 수 있어요.
+              </p>
+
+              <div className="cs-field">
+                <span className="cs-field__label">주택 소유</span>
+                <div className="cs-choices">
+                  {(
+                    [
+                      { v: 'NONE', name: '무주택', hint: '세대구성원 전원 무주택' },
+                      { v: 'ONE', name: '1주택', hint: '처분 조건 공급이 있어요' },
+                      { v: 'MANY', name: '2주택 이상', hint: '지원 가능한 유형이 좁아져요' },
+                    ] as const
+                  ).map(o => (
+                    <button
+                      key={o.v}
+                      type="button"
+                      className="cs-choice"
+                      data-on={ownership === o.v}
+                      onClick={() => {
+                        setOwnership(ownership === o.v ? '' : (o.v as Homeownership))
+                        setTouchedQual(true)
+                      }}
+                    >
+                      <span className="cs-choice__name">{o.name}</span>
+                      <span className="cs-choice__sub">{o.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(
+                [
+                  { key: 'homeless', label: '무주택 기간', unit: '년', max: 16, v: homelessYears, set: setHomelessYears, hint: '가점 32점 항목 · 1년당 2점' },
+                  { key: 'residency', label: '해당지역 거주기간', unit: '년', max: 30, v: residencyYears, set: setResidencyYears, hint: '순위·우선공급을 가르는 기준이에요' },
+                  { key: 'account', label: '청약통장 가입기간', unit: '년', max: 17, v: accountYears, set: setAccountYears, hint: '가점 17점 항목 · 1년당 1점' },
+                  { key: 'dependents', label: '부양가족 수', unit: '명', max: 6, v: dependents, set: setDependents, hint: '가점 35점 항목 · 본인 제외' },
+                ] as const
+              ).map(f => (
+                <div className="cs-field" key={f.key}>
+                  <div className="cs-field__row">
+                    <label className="cs-field__label" htmlFor={`q-${f.key}`} style={{ marginBottom: 0 }}>
+                      {f.label}
+                    </label>
+                    <span className="cs-num" style={{ fontWeight: 700, color: 'var(--title)' }}>
+                      {f.v}
+                      {f.unit}
+                    </span>
+                  </div>
+                  <input
+                    id={`q-${f.key}`}
+                    type="range"
+                    className="cs-range"
+                    min={0}
+                    max={f.max}
+                    step={1}
+                    value={f.v}
+                    onChange={e => {
+                      f.set(Number(e.target.value))
+                      setTouchedQual(true)
+                    }}
+                  />
+                  <p className="cs-note">{f.hint}</p>
+                </div>
+              ))}
+
+              <div className="cs-form-nav">
+                <button className="cs-btn cs-btn--text" onClick={() => setStep(2)}>
                   이전
                 </button>
                 <button className="cs-btn cs-btn--primary" onClick={submit} disabled={busy}>

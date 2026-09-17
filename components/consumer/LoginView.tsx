@@ -28,7 +28,11 @@ export default function LoginView() {
   const next = safeNext(params.get('next'))
   const { user, profile, savedIds, alerts, refresh } = useConsumer()
 
-  const [mode, setMode] = useState<'login' | 'signup'>('signup')
+  // 헤더에서 어느 버튼으로 들어왔는지 따른다. 로그인을 눌렀는데 가입 폼이
+  // 열리면 사용자는 자기가 잘못 눌렀다고 생각한다.
+  const [mode, setMode] = useState<'login' | 'signup'>(
+    params.get('mode') === 'login' ? 'login' : 'signup',
+  )
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   /** 로그인 한 칸 — 아이디든 이메일이든 여기로 들어온다 */
