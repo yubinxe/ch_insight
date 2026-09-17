@@ -6,6 +6,7 @@ import { ELIGIBILITY_CAUTION, type UrgencyInfo } from '@/lib/crm/services/scorin
 import type { Property } from '@/lib/crm/types'
 import NoticeCard from './NoticeCard'
 import { useConsumer } from './ConsumerProvider'
+import { isRental } from '@/lib/consumer/classify'
 
 interface Row {
   property: Property
@@ -68,6 +69,35 @@ export default function SavedView() {
     }
   }, [key, meLoading, savedIds])
 
+  /**
+   * 저장 목록에서 바로 읽히는 것들.
+   *
+   * 목록만 있으면 "몇 건 저장했다"까지는 알아도 "무엇부터 움직여야 하나"는
+   * 세어 봐야 안다. 사람이 세도 되는 일을 화면이 대신한다.
+   */
+  const board = (() => {
+    const live = rows.filter(r => r.urgency.level !== 'CLOSED')
+    const soon = live.filter(r => r.urgency.daysLeft !== null && r.urgency.daysLeft <= 7)
+    const closed = rows.length - live.length
+    const sale = live.filter(r => !isRental(r.property.housingType)).length
+    return {
+      live: live.length,
+      soon: soon.length,
+      closed,
+      sale,
+      rent: live.length - sale,
+      /** 가장 급한 하나 — 여기부터 보면 된다 */
+      next: live
+        .filter(r => r.urgency.daysLeft !== null)
+        .sort((a, b) => (a.urgency.daysLeft ?? 0) - (b.urgency.daysLeft ?? 0))[0] ?? null,
+      /** 남은 날 순으로 세운 띠 */
+      strip: live
+        .filter(r => r.urgency.daysLeft !== null && r.urgency.daysLeft >= 0)
+        .sort((a, b) => (a.urgency.daysLeft ?? 0) - (b.urgency.daysLeft ?? 0))
+        .slice(0, 12),
+    }
+  })()
+
   const removeAlert = async (alertId: string) => {
     await fetch('/api/alerts', {
       method: 'DELETE',
@@ -85,6 +115,76 @@ export default function SavedView() {
           ? `${user.nickname}님이 저장하신 공고예요.`
           : '저장하신 공고예요. 이메일을 남기면 다른 기기에서도 볼 수 있어요.'}
       </p>
+
+      {/* ── 한눈에 ───────────────────────────────────
+          목록 위에 얹는 요약. 저장은 쌓이기만 하면 잊히는데, 잊히지 않게
+          하는 것은 건수가 아니라 "언제까지"다. ── */}
+      {!loading && rows.length > 0 && (
+        <section className="cs-board">
+          <div className="cs-board__stats">
+            <div className="cs-board__stat">
+              <span className="cs-board__n">{board.live}</span>
+              <span className="cs-board__k">접수 중</span>
+            </div>
+            <div className="cs-board__stat" data-hot={board.soon > 0}>
+              <span className="cs-board__n">{board.soon}</span>
+              <span className="cs-board__k">7일 내 마감</span>
+            </div>
+            <div className="cs-board__stat">
+              <span className="cs-board__n">
+                {board.sale}
+                <i className="cs-board__slash">/</i>
+                {board.rent}
+              </span>
+              <span className="cs-board__k">분양 / 임대</span>
+            </div>
+            <div className="cs-board__stat">
+              <span className="cs-board__n">{alerts.length}</span>
+              <span className="cs-board__k">받는 알림</span>
+            </div>
+          </div>
+
+          {board.next && (
+            <Link href={`/notices/${board.next.property.id}`} className="cs-board__next">
+              <span className="cs-board__next-k">가장 급한 공고</span>
+              <span className="cs-board__next-n">{board.next.property.name}</span>
+              <span className="cs-board__next-d">{board.next.urgency.label}</span>
+            </Link>
+          )}
+
+          {board.strip.length > 0 && (
+            <div className="cs-board__strip">
+              <div className="cs-board__strip-k">남은 날 순서</div>
+              <ol className="cs-board__rail">
+                {board.strip.map(r => {
+                  const d = r.urgency.daysLeft ?? 0
+                  return (
+                    <li key={r.property.id}>
+                      <Link
+                        href={`/notices/${r.property.id}`}
+                        className="cs-board__chip"
+                        data-kind={isRental(r.property.housingType) ? 'rent' : 'sale'}
+                        data-urgent={d <= 3}
+                        title={r.property.name}
+                      >
+                        <span className="cs-board__dd">{d === 0 ? 'D-DAY' : `D-${d}`}</span>
+                        <span className="cs-board__nm">{r.property.name}</span>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+          )}
+
+          {board.closed > 0 && (
+            <p className="cs-note" style={{ marginTop: 14 }}>
+              접수가 끝난 공고 {board.closed}건은 아래 목록에 그대로 둡니다 — 지난 기록도 비교에
+              쓰입니다.
+            </p>
+          )}
+        </section>
+      )}
 
       {alerts.length > 0 && (
         <section style={{ marginTop: 32 }}>
