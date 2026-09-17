@@ -295,9 +295,18 @@ export default function NoticeMap() {
       if (anyInView || data.pins.length === 0) return
       fitted = true
       try {
+        // 전부를 담으면 제주까지 들어와 수도권이 좁쌀이 된다. 지금 고른 범위
+        // 안의 공고에만 맞추고, 그것도 없으면 그때 전체로 물러선다.
+        const s = MAP_SCOPE[scope]
+        const near = data.pins
+          .map(p => ({ p, d: Math.hypot(p.lat - s.center.lat, p.lng - s.center.lng) }))
+          .sort((a, b) => a.d - b.d)
+          .slice(0, Math.max(8, Math.round(data.pins.length * 0.35)))
+          .map(x => x.p)
+        const target = near.length ? near : data.pins
         const box = new kakao.maps.LatLngBounds()
-        data.pins.forEach(p => box.extend(new kakao.maps.LatLng(p.lat, p.lng)))
-        map.setBounds(box, 24, 24, 24, 24)
+        target.forEach(p => box.extend(new kakao.maps.LatLng(p.lat, p.lng)))
+        map.setBounds(box, 28, 28, 28, 28)
       } catch {
         /* 못 맞춰도 지도는 그대로 쓸 수 있다 */
       }
@@ -327,7 +336,8 @@ export default function NoticeMap() {
       })
       overlaysRef.current = []
     }
-  }, [ready, data])
+    // scope 가 바뀌면 다시 맞출 기회를 준다
+  }, [ready, data, scope])
 
   return (
     <section className="cs-wrap cs-section" id="map">
