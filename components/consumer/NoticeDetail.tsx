@@ -80,6 +80,28 @@ export default function NoticeDetail({ id }: { id: string }) {
 
   const { property, urgency, candidate, schedule } = data
   const supplyModels = data.supplyModels ?? []
+
+  /**
+   * 주택형 표에서 뽑은 요약.
+   *
+   * 표에 분양가와 면적이 다 있는데 바로 위 카드가 '공고문 확인'이라고 말하고
+   * 있었다. 같은 화면에서 한쪽은 모른다 하고 다른 쪽은 답을 적고 있으면,
+   * 읽는 사람은 어느 쪽을 믿어야 할지 모른다.
+   */
+  const span = (() => {
+    const amounts = supplyModels.map(m => m.topAmount).filter((n): n is number => n !== null)
+    const areas = supplyModels.map(m => m.exclusiveArea).filter((n): n is number => n !== null)
+    const range = (ns: number[], fmt: (n: number) => string) => {
+      if (ns.length === 0) return null
+      const lo = Math.min(...ns)
+      const hi = Math.max(...ns)
+      return lo === hi ? fmt(lo) : `${fmt(lo)} ~ ${fmt(hi)}`
+    }
+    return {
+      price: range(amounts, formatMan),
+      area: range(areas, n => `${n}㎡`),
+    }
+  })()
   /**
    * 예시 공고인가.
    *
@@ -128,32 +150,44 @@ export default function NoticeDetail({ id }: { id: string }) {
       <div className="cs-card" style={{ marginTop: 28 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 24 }}>
           <div>
-            <div className="cs-note">보증금</div>
+            {/* 분양 공고에 '보증금' 을 묻는 것부터 어긋난다. 분양가가 있으면
+                그것을 적고, 이름도 분양가로 바꾼다 */}
+            <div className="cs-note">
+              {property.deposit === null && span.price ? '분양가' : '보증금'}
+            </div>
             <div className="cs-num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--title)', marginTop: 6 }}>
-              {property.deposit === null ? (
-                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
-              ) : (
+              {property.deposit !== null ? (
                 formatMan(property.deposit)
-              )}
-            </div>
-          </div>
-          <div>
-            <div className="cs-note">월 임대료</div>
-            <div className="cs-num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--title)', marginTop: 6 }}>
-              {property.monthlyRent === null ? (
-                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
+              ) : span.price ? (
+                <span style={{ fontSize: 22 }}>{span.price}</span>
               ) : (
-                `${property.monthlyRent.toLocaleString()}만원`
+                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
               )}
             </div>
           </div>
+          {/* 분양가가 잡힌 공고에 '월 임대료 공고문 확인' 은 답이 없는 칸이
+              아니라 물음 자체가 틀린 칸이다. 접는다. */}
+          {!(property.monthlyRent === null && span.price) && (
+            <div>
+              <div className="cs-note">월 임대료</div>
+              <div className="cs-num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--title)', marginTop: 6 }}>
+                {property.monthlyRent === null ? (
+                  <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
+                ) : (
+                  `${property.monthlyRent.toLocaleString()}만원`
+                )}
+              </div>
+            </div>
+          )}
           <div>
             <div className="cs-note">전용면적</div>
             <div className="cs-num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--title)', marginTop: 6 }}>
-              {property.area === null ? (
-                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
-              ) : (
+              {property.area !== null ? (
                 `${property.area}㎡`
+              ) : span.area ? (
+                span.area
+              ) : (
+                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--muted)' }}>공고문 확인</span>
               )}
             </div>
           </div>
