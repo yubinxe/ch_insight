@@ -1720,6 +1720,11 @@
 .cs-notice {
   transition: transform 0.28s var(--ease), border-color 0.28s var(--ease),
     box-shadow 0.28s var(--ease);
+}
+/* will-change 는 그 요소를 위해 합성 레이어를 미리 잡아 둔다. 상시로 걸면
+   목록에 카드가 백 장일 때 백 장 분량의 레이어를 계속 붙들고 있게 된다.
+   실제로 움직이기 직전인 hover 에서만 잡는다. */
+.cs-notice:hover {
   will-change: transform;
 }
 .cs-notice:hover {

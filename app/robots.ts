@@ -76,5 +76,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: '/',
       },
     ],
+    sitemap: `${(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zipcatch.vercel.app').replace(/\/$/, '')}/sitemap.xml`,
   }
 }
