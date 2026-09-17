@@ -4766,3 +4766,83 @@ a.cs-pin:hover {
     font-size: 10px;
   }
 }
+
+/* ═════════════════════════════════════════════════════════
+   지역 청약 결과
+
+   경쟁률은 큰 숫자 하나로 먼저 말한다. 표를 먼저 보이면 읽는 사람이
+   무엇이 요점인지 스스로 찾아야 한다.
+   ═════════════════════════════════════════════════════════ */
+.cs-rate {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cs-rate__n {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.cs-rate__k {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--title);
+  word-break: keep-all;
+}
+
+/* 미달(1:1 미만)은 쪽빛으로. 경쟁이 없다는 것은 나쁜 소식이 아니라
+   기회일 수 있어, 경고색을 쓰지 않는다 */
+.cs-trend__bar[data-under='true'] {
+  background: var(--cal-rent-soft);
+  border-top-color: var(--cal-rent);
+}
+
+.cs-trend__bars--line {
+  position: relative;
+}
+/* 1:1 경계선 — 이 선 아래는 미달이다 */
+.cs-trend__one {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.cs-scores {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.cs-scores__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cs-scores__row:last-of-type {
+  border-bottom: 0;
+}
+.cs-scores__k {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--title);
+}
+.cs-scores__v {
+  font-size: 15px;
+  color: var(--body);
+  font-variant-numeric: tabular-nums;
+}
+.cs-scores__n {
+  margin-left: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}

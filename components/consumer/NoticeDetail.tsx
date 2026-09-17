@@ -30,6 +30,13 @@ interface TradeStat {
   sigungu: string | null
 }
 
+interface RegionStat {
+  province: string
+  months: number
+  competition: { rate: number; supply: number; applied: number; monthly: { month: string; rate: number; supply: number }[] } | null
+  scores: { kind: string; lowest: number | null; average: number | null; highest: number | null; months: number }[]
+}
+
 interface DetailResponse {
   property: Property
   urgency: UrgencyInfo
@@ -45,6 +52,8 @@ export default function NoticeDetail({ id }: { id: string }) {
   const [data, setData] = useState<DetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** 이 지역이 요즘 어느 정도로 붐비는지. 공고 본문과 별개로 늦게 와도 된다 */
+  const [region, setRegion] = useState<RegionStat | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -67,6 +76,23 @@ export default function NoticeDetail({ id }: { id: string }) {
       alive = false
     }
   }, [id])
+
+  const province = data?.property.district?.trim() || data?.property.region?.trim() || ''
+  useEffect(() => {
+    if (!province) return
+    let alive = true
+    fetch(`/api/competition/region?province=${encodeURIComponent(province)}`, { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((json: RegionStat | null) => {
+        if (alive && json && !('error' in json)) setRegion(json)
+      })
+      .catch(() => {
+        /* 곁들이는 통계다. 없다고 본문을 막지 않는다 */
+      })
+    return () => {
+      alive = false
+    }
+  }, [province])
 
   if (loading) {
     return (
@@ -378,6 +404,86 @@ export default function NoticeDetail({ id }: { id: string }) {
               환산액 = 주변 전용 평당 중앙값 × 이 주택형의 전용 평수. 해제된 거래는 뺐고, 거래가
               3건 미만인 달은 비웠습니다. 주변 단지의 연식·규모·브랜드 차이는 반영하지 않은 단순
               비교이므로, 차액이 곧 이익이나 손해를 뜻하지 않습니다. 출처: 국토교통부 실거래가.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* 이 지역의 최근 청약 결과 — 과거이고, 이 공고의 결과를 예측하지 않는다 */}
+      {region && (region.competition || region.scores.length > 0) && (
+        <section style={{ marginTop: 32 }}>
+          <h2 className="cs-section-title" style={{ fontSize: 24 }}>
+            이 지역의 최근 청약 결과
+          </h2>
+          <div className="cs-card" style={{ marginTop: 18 }}>
+            {region.competition && (
+              <>
+                <div className="cs-rate">
+                  <span className="cs-rate__n">{region.competition.rate.toLocaleString()} : 1</span>
+                  <span className="cs-rate__k">
+                    {region.province} 1순위 경쟁률 · 최근 {region.months}개월 합계
+                  </span>
+                  <span className="cs-note">
+                    공급 {region.competition.supply.toLocaleString()}세대 · 신청{' '}
+                    {region.competition.applied.toLocaleString()}건
+                  </span>
+                </div>
+
+                {region.competition.monthly.length >= 3 && (() => {
+                  const ms = region.competition.monthly
+                  const hi = Math.max(...ms.map(m => m.rate), 1)
+                  return (
+                    <div className="cs-trend" style={{ marginTop: 22 }}>
+                      <div className="cs-trend__head">
+                        <span className="cs-note">달별 경쟁률 · 점선이 1 : 1(미달 경계)</span>
+                      </div>
+                      <div className="cs-trend__bars cs-trend__bars--line">
+                        <span className="cs-trend__one" style={{ bottom: `${(1 / hi) * 100}%` }} />
+                        {ms.map(m => (
+                          <div
+                            key={m.month}
+                            className="cs-trend__col"
+                            title={`${m.month} · ${m.rate} : 1 · 공급 ${m.supply.toLocaleString()}세대`}
+                          >
+                            <div
+                              className="cs-trend__bar"
+                              data-under={m.rate < 1}
+                              style={{ height: `${Math.max(4, (m.rate / hi) * 100)}%` }}
+                            />
+                            <span className="cs-trend__m">{m.month.slice(5)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </>
+            )}
+
+            {region.scores.length > 0 && (
+              <div className="cs-scores">
+                <div className="cs-note" style={{ marginBottom: 10 }}>
+                  가점제 당첨 가점 — 0점·미발표는 뺐습니다
+                </div>
+                {region.scores.map(sc => (
+                  <div key={sc.kind} className="cs-scores__row">
+                    <span className="cs-scores__k">{sc.kind}</span>
+                    <span className="cs-num cs-scores__v">
+                      최저 {sc.lowest ?? '—'} · 평균 {sc.average ?? '—'} · 최고 {sc.highest ?? '—'}점
+                      <span className="cs-scores__n">({sc.months}개월)</span>
+                    </span>
+                  </div>
+                ))}
+                <Link href="/score" className="cs-btn cs-btn--sm cs-btn--ghost" style={{ marginTop: 14 }}>
+                  내 가점 계산해 비교하기
+                </Link>
+              </div>
+            )}
+
+            <p className="cs-note" style={{ marginTop: 16 }}>
+              청약홈 공공데이터 기준입니다. 경쟁률은 달마다 규모가 달라 신청 총합 ÷ 공급 총합으로
+              셌습니다. 과거 결과이며 이 공고의 결과를 예측하지 않습니다.{' '}
+              <Link href="/stats">지역별 통계 전체 보기</Link>
             </p>
           </div>
         </section>
