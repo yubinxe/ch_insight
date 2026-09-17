@@ -7,13 +7,13 @@ import { formatManOr } from '@/lib/crm/services/scoring'
 import { PillChoice } from './Choose'
 
 /**
- * 지도로 보는 공고.
+ * 지도로 보는 공고 (카카오맵).
  *
  * 목록은 "무엇이 있는지"를, 달력은 "언제인지"를 답한다. 지도는 "어디인지"다.
  * 집을 고르는 일은 결국 지도 위에서 끝나므로, 남은 날짜를 표시에 얹어
  * 어디가 급한지까지 한 번에 보이게 한다.
  *
- * 좌표의 출처를 숨기지 않는다. 주소를 지오코딩해 얻은 점과 지역 기준의 대략
+ * 좌표의 출처를 숨기지 않는다. 주소를 좌표로 바꿔 찍은 점과 지역 기준의 대략
  * 위치를 다르게 그리고, 지도에 올리지 못한 공고 수를 아래에 적는다.
  * 지도에 없는 공고가 없는 공고처럼 읽히면 지도를 믿고 목록을 안 보게 된다.
  */
@@ -41,89 +41,71 @@ interface MapData {
   total: number
   noCoord: number
   noAddress: number
+  geocoded: number
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type NaverNS = any
+type KakaoNS = any
 
-const KEY_ID = process.env.NEXT_PUBLIC_NAVER_MAP_KEY_ID ?? ''
-const SCRIPT_ID = 'naver-maps-v3'
+const JS_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY ?? ''
+const SCRIPT_ID = 'kakao-maps-sdk'
 
 /**
- * 지도 API 를 한 번만 싣는다.
+ * 지도 SDK 를 한 번만 싣는다.
  *
- * 로더가 언제 준비되는지는 이벤트 하나로 알 수 없다. 실측해 보면 이렇다.
+ * `autoload=false` 로 받아 `kakao.maps.load()` 안에서 시작한다. 카카오가 정한
+ * 방법이고, "언제 준비됐는지"를 이벤트 순서로 짐작하지 않아도 되는 유일한
+ * 길이다 — 그 판단을 신호로 대신하려다 지도 없는 화면을 여러 번 만들었다.
  *
- *   callback  → 이때 `naver.maps` 는 아직 **null**
- *   onload    → 이때는 채워져 **있다**
- *
- * 문서가 안내하는 callback 이 오히려 이른 셈이라, 둘 중 하나만 믿으면
- * 키가 멀쩡한데도 "지도를 불러오지 못했습니다"로 끝난다. 실제로 그렇게 끝났다.
- *
- * 그래서 신호를 기다리지 않고 **결과를 확인한다.** `naver.maps` 가 생기면
- * 그때가 준비된 때다. 이벤트 순서가 나중에 또 바뀌어도 이 방식은 버틴다.
+ * 도메인이 콘솔에 등록돼 있지 않으면 스크립트가 401 로 떨어진다. 그때는
+ * 무엇을 해야 하는지까지 화면에 적는다. 회색 판만 남기지 않는다.
  */
-function loadNaver(): Promise<NaverNS> {
+function loadKakao(): Promise<KakaoNS> {
   if (typeof window === 'undefined') return Promise.reject(new Error('브라우저 전용'))
-  const w = window as unknown as { naver?: NaverNS; __naverMapPromise?: Promise<NaverNS> }
-  if (w.naver?.maps) return Promise.resolve(w.naver)
-  if (w.__naverMapPromise) return w.__naverMapPromise
+  const w = window as unknown as { kakao?: KakaoNS; __kakaoMapPromise?: Promise<KakaoNS> }
+  if (w.kakao?.maps?.Map) return Promise.resolve(w.kakao)
+  if (w.__kakaoMapPromise) return w.__kakaoMapPromise
 
-  w.__naverMapPromise = new Promise<NaverNS>((resolve, reject) => {
-    if (!KEY_ID) {
+  const DOMAIN_HINT =
+    '카카오 개발자 콘솔의 [내 애플리케이션 · 플랫폼 · Web · 사이트 도메인]에 이 주소를 등록해 주세요.'
+
+  w.__kakaoMapPromise = new Promise<KakaoNS>((resolve, reject) => {
+    if (!JS_KEY) {
       reject(new Error('지도 키가 설정되지 않았습니다.'))
       return
     }
 
-    let settled = false
-    let timer: ReturnType<typeof setInterval> | null = null
-    const stop = () => {
-      if (timer) clearInterval(timer)
-      timer = null
-    }
-    const finish = (fn: () => void) => {
-      if (settled) return
-      settled = true
-      stop()
-      fn()
+    const start = () => {
+      const k = (window as unknown as { kakao?: KakaoNS }).kakao
+      if (!k?.maps) {
+        reject(new Error(`지도를 불러오지 못했습니다. ${DOMAIN_HINT}`))
+        return
+      }
+      k.maps.load(() => resolve(k))
     }
 
-    // 인증이 막히면 스크립트는 정상 로드되고 이 전역만 불린다. 잡지 않으면
-    // 회색 판이 이유 없이 남는다.
-    ;(window as unknown as Record<string, unknown>).navermap_authFailure = () =>
-      finish(() =>
-        reject(new Error('지도 인증에 실패했습니다. 콘솔에 이 주소가 등록돼 있는지 확인해 주세요.')),
-      )
-
-    const settleIfReady = () => {
-      const n = (window as unknown as { naver?: NaverNS }).naver
-      if (n?.maps) finish(() => resolve(n))
+    const existing = document.getElementById(SCRIPT_ID)
+    if (existing) {
+      existing.addEventListener('load', start)
+      return
     }
 
     const el = document.createElement('script')
     el.id = SCRIPT_ID
     el.async = true
-    // 지오코더 서브모듈은 부르지 않는다. 키에 Geocoding 이 열려 있지 않으면
-    // 그 요청이 401 을 받고, 그 여파로 `naver.maps` 가 끝내 세워지지 않는다.
-    el.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${KEY_ID}`
-    el.onload = settleIfReady
-    el.onerror = () => finish(() => reject(new Error('지도를 불러오지 못했습니다.')))
+    el.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${JS_KEY}&autoload=false`
+    el.onload = start
+    el.onerror = () => reject(new Error(`지도를 불러오지 못했습니다. ${DOMAIN_HINT}`))
     document.head.appendChild(el)
 
-    // onload 뒤에도 한 박자 늦게 채워지는 경우가 있어 짧게 되짚는다.
-    timer = setInterval(settleIfReady, 120)
-
-    setTimeout(
-      () => finish(() => reject(new Error('지도를 불러오는 데 너무 오래 걸립니다.'))),
-      15000,
-    )
+    setTimeout(() => reject(new Error('지도를 불러오는 데 너무 오래 걸립니다.')), 15000)
   }).catch(err => {
     // 실패한 약속을 캐시에 남기면 다시 들어와도 영영 지도가 없다.
-    delete (window as unknown as { __naverMapPromise?: unknown }).__naverMapPromise
+    delete (window as unknown as { __kakaoMapPromise?: unknown }).__kakaoMapPromise
     throw err
   })
 
-  return w.__naverMapPromise
+  return w.__kakaoMapPromise
 }
 
 /** 남은 날을 사람 말로. 표시 안에 들어가므로 짧아야 한다 */
@@ -141,10 +123,13 @@ function priceLine(p: Pin) {
   return `${dep} · 월 ${p.monthlyRent.toLocaleString()}만원`
 }
 
+/** 카카오의 level 은 작을수록 확대다. 우리 범위를 그 눈금으로 옮긴다 */
+const LEVEL: Record<MapScope, number> = { 서울: 7, 수도권: 9, 전국: 13 }
+
 export default function NoticeMap() {
   const host = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<NaverNS>(null)
-  const markersRef = useRef<NaverNS[]>([])
+  const mapRef = useRef<KakaoNS>(null)
+  const overlaysRef = useRef<KakaoNS[]>([])
 
   const [scope, setScope] = useState<MapScope>('서울')
   const [data, setData] = useState<MapData | null>(null)
@@ -171,22 +156,16 @@ export default function NoticeMap() {
     }
   }, [])
 
-  // 지도를 세운다. 데이터가 오기 전에도 먼저 띄워 빈 판이 깜빡이지 않게 한다.
+  // 지도를 세운다. 데이터가 오기 전에 먼저 띄워 빈 판이 깜빡이지 않게 한다.
   useEffect(() => {
     let alive = true
-    if (!host.current) return
-    loadNaver()
-      .then(naver => {
+    loadKakao()
+      .then(kakao => {
         if (!alive || !host.current || mapRef.current) return
-        const s = MAP_SCOPE[scope]
-        mapRef.current = new naver.maps.Map(host.current, {
-          center: new naver.maps.LatLng(s.center.lat, s.center.lng),
-          zoom: s.zoom,
-          zoomControl: true,
-          zoomControlOptions: { position: naver.maps.Position.TOP_LEFT },
-          scaleControl: false,
-          mapDataControl: false,
-          logoControlOptions: { position: naver.maps.Position.BOTTOM_LEFT },
+        const s = MAP_SCOPE.서울
+        mapRef.current = new kakao.maps.Map(host.current, {
+          center: new kakao.maps.LatLng(s.center.lat, s.center.lng),
+          level: LEVEL.서울,
         })
         setReady(true)
       })
@@ -196,34 +175,32 @@ export default function NoticeMap() {
     return () => {
       alive = false
     }
-    // scope 는 아래 별도 효과에서 다룬다 — 지도를 다시 만들지 않는다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 범위 탭을 누르면 지도를 옮긴다. 다시 만들지 않는다 — 다시 만들면 눈이 끊긴다.
+  // 범위를 누르면 옮긴다. 다시 만들지 않는다 — 다시 만들면 눈이 끊긴다.
   useEffect(() => {
-    const w = window as unknown as { naver?: NaverNS }
-    if (!ready || !mapRef.current || !w.naver?.maps) return
+    const w = window as unknown as { kakao?: KakaoNS }
+    if (!ready || !mapRef.current || !w.kakao?.maps) return
     const s = MAP_SCOPE[scope]
-    mapRef.current.morph(new w.naver.maps.LatLng(s.center.lat, s.center.lng), s.zoom)
+    mapRef.current.setLevel(LEVEL[scope])
+    mapRef.current.panTo(new w.kakao.maps.LatLng(s.center.lat, s.center.lng))
   }, [scope, ready])
 
-  // 표시를 그린다. 지도의 기본 핀 대신 지면의 글자꼴로 만든 표를 쓴다.
+  // 표시를 그린다. 기본 핀 대신 지면의 글자꼴로 만든 표를 얹는다.
   useEffect(() => {
-    const w = window as unknown as { naver?: NaverNS }
-    // `naver` 는 있는데 `naver.maps` 가 비는 순간이 있다. 한 겹 더 확인하지
-    // 않으면 표시를 그리다 페이지 전체가 내려앉는다.
-    if (!ready || !mapRef.current || !data || !w.naver?.maps) return
-    const naver = w.naver
+    const w = window as unknown as { kakao?: KakaoNS }
+    if (!ready || !mapRef.current || !data || !w.kakao?.maps) return
+    const kakao = w.kakao
     const map = mapRef.current
 
-    markersRef.current.forEach(m => m.setMap(null))
-    markersRef.current = []
+    overlaysRef.current.forEach(o => o.setMap(null))
+    overlaysRef.current = []
 
     data.pins.forEach(pin => {
       const urgent = pin.daysLeft !== null && pin.daysLeft <= 3
       const approx = pin.coordSource !== 'GEOCODED'
-      const cls = [
+      const el = document.createElement('a')
+      el.className = [
         'cs-pin',
         `cs-pin--${pin.kind.toLowerCase()}`,
         urgent ? 'cs-pin--urgent' : '',
@@ -231,40 +208,48 @@ export default function NoticeMap() {
       ]
         .filter(Boolean)
         .join(' ')
+      el.href = `/notices/${pin.id}`
+      el.title = `${pin.name} · ${pin.province}`
+      el.textContent = dday(pin.daysLeft)
+      el.addEventListener('mouseenter', () => setHovered(pin.id))
+      el.addEventListener('mouseleave', () => setHovered(null))
 
-      const marker = new naver.maps.Marker({
-        map,
-        position: new naver.maps.LatLng(pin.lat, pin.lng),
-        title: pin.name,
-        icon: {
-          content: `<span class="${cls}" data-id="${pin.id}">${dday(pin.daysLeft)}</span>`,
-          anchor: new naver.maps.Point(26, 14),
-        },
-      })
-      naver.maps.Event.addListener(marker, 'click', () => {
-        window.location.href = `/notices/${pin.id}`
-      })
-      markersRef.current.push(marker)
+      overlaysRef.current.push(
+        new kakao.maps.CustomOverlay({
+          map,
+          position: new kakao.maps.LatLng(pin.lat, pin.lng),
+          content: el,
+          yAnchor: 0.5,
+          xAnchor: 0.5,
+          clickable: true,
+        }),
+      )
     })
 
     // 지도를 움직이면 옆 목록이 따라온다. 보이는 것과 읽는 것을 어긋나게 두지 않는다.
     const sync = () => {
       const b = map.getBounds()
-      const inView = data.pins.filter(p => b.hasLatLng(new naver.maps.LatLng(p.lat, p.lng)))
+      const sw = b.getSouthWest()
+      const ne = b.getNorthEast()
+      const inView = data.pins.filter(
+        p =>
+          p.lat >= sw.getLat() &&
+          p.lat <= ne.getLat() &&
+          p.lng >= sw.getLng() &&
+          p.lng <= ne.getLng(),
+      )
       inView.sort((a, z) => (a.daysLeft ?? 9999) - (z.daysLeft ?? 9999))
       setVisible(inView)
     }
     sync()
-    const l1 = naver.maps.Event.addListener(map, 'idle', sync)
+    kakao.maps.event.addListener(map, 'idle', sync)
 
     return () => {
-      naver.maps.Event.removeListener(l1)
-      markersRef.current.forEach(m => m.setMap(null))
-      markersRef.current = []
+      kakao.maps.event.removeListener(map, 'idle', sync)
+      overlaysRef.current.forEach(o => o.setMap(null))
+      overlaysRef.current = []
     }
   }, [ready, data])
-
-  const geocodedCount = data?.pins.filter(p => p.coordSource === 'GEOCODED').length ?? 0
 
   return (
     <section className="cs-wrap cs-section" id="map">
@@ -292,58 +277,63 @@ export default function NoticeMap() {
             <i className="cs-pin cs-pin--rent cs-pin--chip" />
             임대
           </span>
+          <span className="cs-map__key">
+            <i className="cs-pin cs-pin--rent cs-pin--approx cs-pin--chip" />
+            지역 기준
+          </span>
         </div>
       </div>
 
-      {error ? (
-        <div className="cs-error" style={{ marginTop: 20 }}>
-          <span>{error}</span>
-        </div>
-      ) : (
-        <div className="cs-map">
+      <div className="cs-map">
+        {error ? (
+          <div className="cs-map__fallback">
+            <span className="cs-vacancy__eyebrow">지도를 열지 못했습니다</span>
+            <p className="cs-vacancy__title">{error}</p>
+            <p className="cs-vacancy__desc">지도가 없어도 공고는 아래 목록에서 전부 보실 수 있어요.</p>
+          </div>
+        ) : (
           <div className="cs-map__canvas" ref={host} role="application" aria-label="공고 지도" />
+        )}
 
-          <aside className="cs-map__side" aria-label="보이는 범위의 공고">
-            <div className="cs-map__side-head">
-              <strong>보이는 범위의 공고</strong>
-              <span className="cs-num">{visible.length}건</span>
-            </div>
-            {visible.length === 0 ? (
-              <p className="cs-note" style={{ padding: '18px 16px' }}>
-                이 범위에는 표시된 공고가 없어요. 지도를 넓히거나 범위를 바꿔 보세요.
-              </p>
-            ) : (
-              <ul className="cs-map__list">
-                {visible.map(p => (
-                  <li key={p.id} data-hover={hovered === p.id}>
-                    <Link
-                      href={`/notices/${p.id}`}
-                      onMouseEnter={() => setHovered(p.id)}
-                      onMouseLeave={() => setHovered(null)}
-                    >
-                      <span
-                        className="cs-map__dday"
-                        data-urgent={p.daysLeft !== null && p.daysLeft <= 3}
-                      >
-                        {dday(p.daysLeft)}
-                      </span>
-                      <span className="cs-map__name">{p.name}</span>
-                      <span className="cs-map__meta">
-                        {p.province} · {p.housingType} · {priceLine(p)}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </aside>
-        </div>
-      )}
+        <aside className="cs-map__side" aria-label="보이는 범위의 공고">
+          <div className="cs-map__side-head">
+            <strong>보이는 범위의 공고</strong>
+            <span className="cs-num">{visible.length}건</span>
+          </div>
+          {visible.length === 0 ? (
+            <p className="cs-note" style={{ padding: '18px 16px' }}>
+              {error
+                ? '지도를 열지 못해 범위를 셀 수 없어요.'
+                : '이 범위에는 표시된 공고가 없어요. 지도를 넓히거나 범위를 바꿔 보세요.'}
+            </p>
+          ) : (
+            <ul className="cs-map__list">
+              {visible.map(p => (
+                <li key={p.id} data-hover={hovered === p.id}>
+                  <Link
+                    href={`/notices/${p.id}`}
+                    onMouseEnter={() => setHovered(p.id)}
+                    onMouseLeave={() => setHovered(null)}
+                  >
+                    <span className="cs-map__dday" data-urgent={p.daysLeft !== null && p.daysLeft <= 3}>
+                      {dday(p.daysLeft)}
+                    </span>
+                    <span className="cs-map__name">{p.name}</span>
+                    <span className="cs-map__meta">
+                      {p.province} · {p.housingType} · {priceLine(p)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
 
       {data && (
         <p className="cs-note" style={{ marginTop: 16 }}>
           지도에 표시된 공고 {data.pins.length}건
-          {geocodedCount > 0 && ` · 주소로 정확히 찍은 공고 ${geocodedCount}건`}
+          {data.geocoded > 0 && ` · 주소로 정확히 찍은 공고 ${data.geocoded}건`}
           {data.noAddress > 0 &&
             ` · 주소가 없어 지역 기준으로 표시한 공고 ${data.noAddress}건(LH 목록에는 주소 칸이 없습니다)`}
           {data.noCoord > 0 && ` · 위치를 찾지 못한 공고 ${data.noCoord}건`}.{' '}

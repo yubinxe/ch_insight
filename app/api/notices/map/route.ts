@@ -1,6 +1,7 @@
 import { listOfficialProperties } from '@/lib/consumer/official'
 import { isRental, provinceOf } from '@/lib/consumer/classify'
 import { resolveCoord } from '@/lib/consumer/geo'
+import { geocodeMany, isGeocodingConfigured } from '@/lib/consumer/geocode'
 import { checkUrgency } from '@/lib/crm/services/scoring'
 
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,12 @@ export async function GET() {
     const now = new Date()
     const all = await listOfficialProperties({ limit: 400 })
 
+    // 주소가 있는 건은 먼저 좌표로 바꿔둔다. 지오코딩 키가 없거나 못 찾으면
+    // 아래에서 지역 기준으로 물러선다 — 지도가 비는 일은 없다.
+    const geocoded = isGeocodingConfigured()
+      ? await geocodeMany(all.map(p => p.address)).catch(() => new Map())
+      : new Map()
+
     const pins = []
     let noCoord = 0
     const byProvince = new Map<string, number>()
@@ -31,6 +38,7 @@ export async function GET() {
       byProvince.set(province, (byProvince.get(province) ?? 0) + 1)
 
       const coord = resolveCoord({
+        geocoded: geocoded.get((p.address ?? '').trim()) ?? null,
         address: p.address,
         region: p.region,
         province,
@@ -65,6 +73,8 @@ export async function GET() {
       noCoord,
       /** 주소가 아예 없는 건 — LH 목록에는 주소 칸이 없다 */
       noAddress: pins.filter(p => !p.address).length,
+      /** 주소를 좌표로 바꿔 정확히 찍은 건 */
+      geocoded: pins.filter(p => p.coordSource === 'GEOCODED').length,
       provinces: [...byProvince.entries()]
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count),

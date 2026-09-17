@@ -3741,3 +3741,23 @@ body:has(.cs-ticker) .cs-chat {
 #map {
   scroll-margin-top: 92px;
 }
+
+/* 지도를 열지 못했을 때 — 회색 판 대신 이유와 할 일을 적는다 */
+.cs-map__fallback {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: clamp(28px, 4vw, 44px);
+  min-height: 320px;
+  border: 1px dashed var(--line-ink);
+  border-radius: var(--r-card);
+  background: var(--paper-2);
+}
+.cs-map__fallback .cs-vacancy__title {
+  font-size: clamp(18px, 2vw, 22px);
+  line-height: 1.5;
+}
+/* 지도 위 표시는 링크다 — 밑줄까지 딸려오면 표가 지저분해진다 */
+a.cs-pin {
+  text-decoration: none;
+}
