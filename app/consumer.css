@@ -3727,3 +3727,17 @@ body:has(.cs-ticker) .cs-chat {
     max-height: 420px;
   }
 }
+
+/* 지도 진입 — 글자 버튼이지만 아이콘이 앞서 무엇인지 먼저 읽힌다 */
+.cs-btn--map {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.cs-btn--map svg {
+  opacity: 0.75;
+}
+/* 앵커로 뛰어들 때 머리가 헤더에 가리지 않게 */
+#map {
+  scroll-margin-top: 92px;
+}

@@ -134,6 +134,25 @@ export default function ConsumerHome() {
             <Link href="/notices" className="cs-btn cs-btn--text">
               모집공고 둘러보기
             </Link>
+            {/* 목록과 지도는 같은 공고를 다르게 보는 두 창구다. 목록으로만
+                들여보내면 지도가 있는 줄도 모른다. */}
+            <Link href="/notices#map" className="cs-btn cs-btn--text cs-btn--map">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3Z" />
+                <path d="M9 3v15M15 6v15" />
+              </svg>
+              지도로 보기
+            </Link>
           </div>
 
           <p className="cs-note" style={{ marginTop: 20 }}>

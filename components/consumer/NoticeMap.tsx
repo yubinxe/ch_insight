@@ -69,7 +69,11 @@ function loadNaver(): Promise<NaverNS> {
     const el = document.createElement('script')
     el.id = SCRIPT_ID
     el.async = true
-    el.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${KEY_ID}&submodules=geocoder`
+    // 지오코더 서브모듈을 함께 부르지 않는다. 키에 Geocoding 이 열려 있지
+    // 않으면 그 요청이 401 을 받고, 그 여파로 `naver.maps` 자체가 세워지지
+    // 않아 지도 전체가 죽는다. 쓰지도 않는 것을 불러 화면을 잃을 이유가 없다.
+    // 콘솔에서 Geocoding 을 켠 뒤 `&submodules=geocoder` 를 되살리면 된다.
+    el.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${KEY_ID}`
     el.onload = () => {
       const n = (window as unknown as { naver?: NaverNS }).naver
       if (n?.maps) resolve(n)
@@ -158,7 +162,7 @@ export default function NoticeMap() {
   // 범위 탭을 누르면 지도를 옮긴다. 다시 만들지 않는다 — 다시 만들면 눈이 끊긴다.
   useEffect(() => {
     const w = window as unknown as { naver?: NaverNS }
-    if (!ready || !mapRef.current || !w.naver) return
+    if (!ready || !mapRef.current || !w.naver?.maps) return
     const s = MAP_SCOPE[scope]
     mapRef.current.morph(new w.naver.maps.LatLng(s.center.lat, s.center.lng), s.zoom)
   }, [scope, ready])
@@ -166,7 +170,9 @@ export default function NoticeMap() {
   // 표시를 그린다. 지도의 기본 핀 대신 지면의 글자꼴로 만든 표를 쓴다.
   useEffect(() => {
     const w = window as unknown as { naver?: NaverNS }
-    if (!ready || !mapRef.current || !data || !w.naver) return
+    // `naver` 는 있는데 `naver.maps` 가 비는 순간이 있다. 한 겹 더 확인하지
+    // 않으면 표시를 그리다 페이지 전체가 내려앉는다.
+    if (!ready || !mapRef.current || !data || !w.naver?.maps) return
     const naver = w.naver
     const map = mapRef.current
 
@@ -220,7 +226,7 @@ export default function NoticeMap() {
   const geocodedCount = data?.pins.filter(p => p.coordSource === 'GEOCODED').length ?? 0
 
   return (
-    <section className="cs-wrap cs-section">
+    <section className="cs-wrap cs-section" id="map">
       <header>
         <h2 className="cs-section-title">지도로 보는 공고</h2>
         <p className="cs-sub" style={{ marginTop: 12, marginBottom: 22 }}>
