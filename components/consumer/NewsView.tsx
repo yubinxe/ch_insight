@@ -20,6 +20,8 @@ interface NewsItem {
   link: string
   source: string
   publishedAt: string | null
+  /** 매체 로고. 기사 사진이 아니다 — 지어낸 이미지를 얹지 않는다 */
+  logo: string | null
 }
 
 const TABS = [
@@ -43,6 +45,38 @@ function ago(iso: string | null) {
   const day = Math.round(hr / 24)
   if (day <= 14) return `${day}일 전`
   return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+/**
+ * 매체 표식.
+ *
+ * 로고를 못 불러오면 깨진 그림 아이콘이 남는다. 기사마다 구멍이 뚫린 것처럼
+ * 보이므로, 실패하면 매체 첫 글자로 조용히 갈음한다.
+ */
+function SourceMark({ logo, source, rank }: { logo: string | null; source: string; rank: number }) {
+  const [failed, setFailed] = useState(false)
+  const show = logo && !failed
+
+  return (
+    <span className="cs-news__logo" aria-hidden="true">
+      {show ? (
+        // next/image 를 쓰지 않는다. 40px 파비콘 서른 장을 이미지 최적화기에
+        // 태우면 변환 비용만 늘고 얻는 게 없다.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logo}
+          alt=""
+          loading="lazy"
+          width={40}
+          height={40}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="cs-news__initial">{source.slice(0, 1)}</span>
+      )}
+      <span className="cs-news__rank cs-num">{String(rank).padStart(2, '0')}</span>
+    </span>
+  )
 }
 
 export default function NewsView() {
@@ -93,7 +127,7 @@ export default function NewsView() {
         </p>
       </header>
 
-      <div style={{ marginTop: 28 }}>
+      <div className="cs-news__topics">
         <PillChoice
           label="주제"
           value={topic}
@@ -101,10 +135,14 @@ export default function NewsView() {
           items={TABS.map(t => ({ value: t.key, label: t.label }))}
         />
       </div>
-      <p className="cs-note" style={{ marginTop: 14 }}>
-        {current.hint}
-        {query && ` · 검색어: ${query}`}
-      </p>
+
+      {/* 고른 주제를 제목으로 한 번 더 세운다. 알약만으로는 스크롤을 내린 뒤
+          지금 무엇을 보고 있는지 잊는다. */}
+      <div className="cs-news__head">
+        <h2 className="cs-news__now">{current.label}</h2>
+        <p className="cs-news__hint">{current.hint}</p>
+        {query && <p className="cs-note">검색어: {query}</p>}
+      </div>
 
       {error ? (
         <div className="cs-error" style={{ marginTop: 28 }}>
@@ -129,7 +167,7 @@ export default function NewsView() {
         <ol className="cs-news">
           {items.map((n, i) => (
             <li key={n.link} className="cs-news__item">
-              <span className="cs-news__index cs-num">{String(i + 1).padStart(2, '0')}</span>
+              <SourceMark logo={n.logo} source={n.source} rank={i + 1} />
               <div className="cs-news__body">
                 <a
                   className="cs-news__title"
@@ -167,8 +205,9 @@ export default function NewsView() {
       </section>
 
       <p className="cs-note" style={{ marginTop: 32 }}>
-        기사 제목과 매체명, 발행 시각만 정리해 보여드리며 본문은 옮기지 않습니다. 저작권은 각 매체에
-        있고, 제목을 누르면 원문으로 이동합니다. 집계 출처: Google 뉴스.
+        기사 제목과 매체명, 발행 시각만 정리해 보여드리며 본문은 옮기지 않습니다. 함께 보이는 그림은
+        기사 사진이 아니라 그 기사를 쓴 매체의 로고입니다. 저작권은 각 매체에 있고, 제목을 누르면
+        원문으로 이동합니다. 집계 출처: Google 뉴스.
       </p>
     </div>
   )

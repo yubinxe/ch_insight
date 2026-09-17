@@ -62,6 +62,8 @@ interface NewsItem {
   link: string
   source: string
   publishedAt: string | null
+  /** 매체 로고. 기사 사진이 아니다 — 아래 toItem 주석 참고 */
+  logo: string | null
 }
 
 function decode(s: string) {
@@ -100,11 +102,28 @@ function toItem(block: string): NewsItem | null {
   const pub = pick(block, 'pubDate')
   const at = pub ? new Date(pub) : null
 
+  // 기사 사진은 붙이지 못한다. 구글 뉴스 링크는 서버로 리다이렉트하지 않고
+  // 자바스크립트 중간 페이지를 돌려주기 때문에, 서버에서 원문을 열어
+  // og:image 를 읽으려 해도 빈손으로 돌아온다(실측 0/5).
+  // 아무 사진이나 얹으면 그 기사의 사진인 것처럼 읽히므로, 대신 매체의 로고를
+  // 붙인다 — 지어낸 이미지가 아니라 그 기사를 쓴 곳의 표식이다.
+  const srcUrl = block.match(/<source[^>]*url="([^"]+)"/)?.[1] ?? ''
+  let logo: string | null = null
+  try {
+    if (srcUrl) {
+      const host = new URL(srcUrl).hostname
+      logo = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`
+    }
+  } catch {
+    logo = null
+  }
+
   return {
     title,
     link,
     source,
     publishedAt: at && !Number.isNaN(at.getTime()) ? at.toISOString() : null,
+    logo,
   }
 }
 

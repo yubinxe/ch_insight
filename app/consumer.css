@@ -3158,3 +3158,172 @@ body:has(.cs-ticker) .cs-chat {
   font-family: var(--font-brand), var(--font-sans);
   letter-spacing: 0.07em;
 }
+
+/* ═════════════════════════════════════════════════════════
+   본문 크기 한 단 올리기
+   담백한 지면이라 글자가 가늘고 작으면 정보가 아니라 배경으로 읽힌다.
+   위계는 그대로 두고 각 단을 한 칸씩 올린다.
+   ═════════════════════════════════════════════════════════ */
+.cs-lead {
+  font-size: 21px;
+}
+.cs-sub {
+  font-size: 19px;
+}
+.cs-note {
+  font-size: 15px;
+}
+.cs-main p,
+.cs-main li {
+  font-size: 17px;
+}
+.cs-main .cs-lead {
+  font-size: 21px;
+}
+.cs-main .cs-sub {
+  font-size: 19px;
+}
+.cs-main .cs-note {
+  font-size: 15px;
+}
+.cs-faq__q {
+  font-size: 19px;
+}
+.cs-faq__a {
+  font-size: 18px;
+}
+.cs-nav__link {
+  font-size: 16px;
+}
+.cs-pill,
+.cs-newstab,
+.cs-chip,
+.cs-gridpick {
+  font-size: 16px;
+}
+.cs-choose__label,
+.cs-filter__label {
+  font-size: 14px;
+}
+.cs-stat__name {
+  font-size: 17px;
+}
+.cs-stat__meta {
+  font-size: 14px;
+}
+.cs-score__label {
+  font-size: 18px;
+}
+.cs-score__rule {
+  font-size: 14px;
+}
+.cs-score__insight {
+  font-size: 17px;
+}
+.cs-score__detail {
+  font-size: 15px;
+}
+.cs-vacancy__desc,
+.cs-nearby__desc {
+  font-size: 17px;
+}
+.cs-empty__desc {
+  font-size: 17px;
+}
+.cs-footer p {
+  font-size: 14px;
+}
+.cs-notice__where {
+  font-size: 16px;
+}
+
+/* ═════════════════════════════════════════════════════════
+   청약뉴스 — 주제를 세우고 매체 로고를 붙인다
+   ═════════════════════════════════════════════════════════ */
+.cs-news__topics {
+  margin-top: 30px;
+}
+.cs-news__head {
+  display: grid;
+  gap: 6px;
+  margin-top: 30px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--line-ink);
+}
+.cs-news__now {
+  margin: 0;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--title);
+}
+.cs-news__hint {
+  margin: 0;
+  font-size: 17px;
+  color: var(--muted);
+}
+
+.cs-news__item {
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  padding: 22px 0;
+  align-items: start;
+}
+/* 로고 칸 — 사각 타일에 매체 표식, 아래 작은 순번 */
+.cs-news__logo {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+.cs-news__logo img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 4px;
+}
+.cs-news__initial {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.cs-news__rank {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.cs-news__title {
+  font-size: 20px;
+  line-height: 1.48;
+}
+.cs-news__meta {
+  font-size: 14px;
+  margin-top: 9px;
+}
+
+@media (max-width: 640px) {
+  .cs-news__item {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .cs-news__logo img,
+  .cs-news__initial {
+    width: 36px;
+    height: 36px;
+  }
+  .cs-news__title {
+    font-size: 18px;
+  }
+}

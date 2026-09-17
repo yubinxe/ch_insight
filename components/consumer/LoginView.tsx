@@ -30,9 +30,17 @@ export default function LoginView() {
 
   // 헤더에서 어느 버튼으로 들어왔는지 따른다. 로그인을 눌렀는데 가입 폼이
   // 열리면 사용자는 자기가 잘못 눌렀다고 생각한다.
-  const [mode, setMode] = useState<'login' | 'signup'>(
-    params.get('mode') === 'login' ? 'login' : 'signup',
-  )
+  const urlMode: 'login' | 'signup' = params.get('mode') === 'login' ? 'login' : 'signup'
+  const [mode, setMode] = useState<'login' | 'signup'>(urlMode)
+
+  // 이 화면에 머문 채 헤더의 다른 버튼을 누르면 주소만 바뀌고 컴포넌트는
+  // 그대로 남는다. useState 의 초기값은 그때 다시 읽히지 않아서, 눌러도
+  // 아무 일도 안 일어나는 것처럼 보였다. 주소가 바뀌면 따라 바꾼다.
+  const [syncedMode, setSyncedMode] = useState(urlMode)
+  if (syncedMode !== urlMode) {
+    setSyncedMode(urlMode)
+    setMode(urlMode)
+  }
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   /** 로그인 한 칸 — 아이디든 이메일이든 여기로 들어온다 */
@@ -144,7 +152,21 @@ export default function LoginView() {
 
       {/* 오른쪽 — 입력 */}
       <div>
-        <AuthSwitch mode={mode} onChange={m => { setMode(m); setError(null) }} disabled={busy} />
+        <AuthSwitch
+          mode={mode}
+          disabled={busy}
+          onChange={m => {
+            setMode(m)
+            setSyncedMode(m)
+            setError(null)
+            // 주소도 함께 옮긴다. 이 화면을 공유하거나 새로고침해도 같은 폼이
+            // 열리고, 헤더 버튼과 이 토글이 서로 다른 말을 하지 않는다.
+            // replace 를 쓴다 — 폼을 오갔다고 뒤로가기 기록이 쌓일 일은 아니다.
+            router.replace(`/login?mode=${m}${next ? `&next=${encodeURIComponent(next)}` : ''}`, {
+              scroll: false,
+            })
+          }}
+        />
 
         <form onSubmit={submit} key={mode} className="cs-swap">
           {mode === 'signup' ? (
