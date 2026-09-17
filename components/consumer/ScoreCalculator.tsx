@@ -254,7 +254,7 @@ export default function ScoreCalculator() {
                       <dd className="cs-num">{comparison.reference.max.toFixed(1)}</dd>
                     </div>
                     <div>
-                      <dt>기준월</dt>
+                      <dt>기준 기간</dt>
                       <dd className="cs-num">{comparison.reference.statMonth || '—'}</dd>
                     </div>
                   </dl>

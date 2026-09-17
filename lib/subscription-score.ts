@@ -150,10 +150,19 @@ export function aggregateReferenceStats(
 ): ReferenceStats | null {
   if (rows.length === 0) return null
 
-  const avgs = rows.map(r => parseFloat(r.AVRG_SCORE)).filter(Number.isFinite)
-  const mins = rows.map(r => parseFloat(r.LWET_SCORE)).filter(Number.isFinite)
-  const maxs = rows.map(r => parseFloat(r.TOP_SCORE)).filter(Number.isFinite)
-  const meds = rows.map(r => parseFloat(r.MED_SCORE || r.AVRG_SCORE)).filter(Number.isFinite)
+  /**
+   * 0 점은 집계에서 뺀다.
+   *
+   * 가점제로 0 점에 당첨되는 일은 사실상 없다. 청약홈 통계의 0 은
+   * '가점제 당첨 없음' 또는 '미발표'를 뜻하는 자리표다. 그대로 세면
+   * 최저 당첨가점이 0 점으로 떨어지고, 평균도 함께 끌려 내려간다.
+   */
+  const usable = (v: number) => Number.isFinite(v) && v > 0
+
+  const avgs = rows.map(r => parseFloat(r.AVRG_SCORE)).filter(usable)
+  const mins = rows.map(r => parseFloat(r.LWET_SCORE)).filter(usable)
+  const maxs = rows.map(r => parseFloat(r.TOP_SCORE)).filter(usable)
+  const meds = rows.map(r => parseFloat(r.MED_SCORE || r.AVRG_SCORE)).filter(usable)
 
   if (avgs.length === 0) return null
 
@@ -162,8 +171,12 @@ export function aggregateReferenceStats(
   if (mins.length === 0 || maxs.length === 0) return null
 
   const median = meds.length ? meds.reduce((a, b) => a + b, 0) / meds.length : avg
-  const months = rows.map(r => r.STAT_DE).filter(Boolean) as string[]
-  const statMonth = months.sort().reverse()[0] ?? ''
+  // 열두 달을 모아 세므로 한 달을 적으면 거짓이 된다. 기간으로 적는다.
+  const months = (rows.map(r => r.STAT_DE).filter(Boolean) as string[]).sort()
+  const label = (m: string) => (m.length === 6 ? `${m.slice(0, 4)}.${m.slice(4, 6)}` : m)
+  const first = months[0]
+  const last = months[months.length - 1]
+  const statMonth = !first ? '' : first === last ? label(first) : `${label(first)} ~ ${label(last)}`
 
   return {
     avg: Math.round(avg * 10) / 10,
