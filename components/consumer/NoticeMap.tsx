@@ -128,8 +128,17 @@ function priceLine(p: Pin) {
   return `${dep} · 월 ${p.monthlyRent.toLocaleString()}만원`
 }
 
-/** 카카오의 level 은 작을수록 확대다. 우리 범위를 그 눈금으로 옮긴다 */
-const LEVEL: Record<MapScope, number> = { 서울: 7, 수도권: 9, 전국: 13 }
+/**
+ * 카카오의 level 은 작을수록 확대이고, 한 단 오를 때마다 대략 두 배씩 넓어진다.
+ * 7 은 가로 1km 남짓 — 서울 도심 몇 블록이다. 처음에 이 값을 "서울"로 잡았더니
+ * 지도 범위가 37.53~37.59 로 잡혀, 의정부·시흥·양주에 있는 공고가 전부 화면
+ * 밖으로 나갔다. 표시는 102개 다 만들어졌는데 하나도 안 보였던 이유다.
+ *
+ *   9 ≈ 4km    서울 전역
+ *  11 ≈ 16km   수도권
+ *  13 ≈ 64km   전국
+ */
+const LEVEL: Record<MapScope, number> = { 서울: 9, 수도권: 11, 전국: 13 }
 
 export default function NoticeMap() {
   const host = useRef<HTMLDivElement>(null)
@@ -262,9 +271,44 @@ export default function NoticeMap() {
       inView.sort((a, z) => (a.daysLeft ?? 9999) - (z.daysLeft ?? 9999))
       setVisible(inView)
     }
+    /**
+     * 화면에 표시가 하나도 없으면 공고가 있는 데로 맞춘다.
+     *
+     * 빈 지도를 보여주는 것은 지도가 없는 것보다 나쁘다 — 공고가 없다고 읽히기
+     * 때문이다. 축척을 아무리 잘 잡아도 데이터가 어디에 몰릴지는 그때그때 다르다.
+     * 처음 한 번만 맞추고, 그 뒤 사용자가 움직인 화면은 건드리지 않는다.
+     */
+    let fitted = false
+    const fitIfEmpty = () => {
+      if (fitted) return
+      const b = map.getBounds()
+      if (!b) return
+      const sw = b.getSouthWest()
+      const ne = b.getNorthEast()
+      const anyInView = data.pins.some(
+        p =>
+          p.lat >= sw.getLat() &&
+          p.lat <= ne.getLat() &&
+          p.lng >= sw.getLng() &&
+          p.lng <= ne.getLng(),
+      )
+      if (anyInView || data.pins.length === 0) return
+      fitted = true
+      try {
+        const box = new kakao.maps.LatLngBounds()
+        data.pins.forEach(p => box.extend(new kakao.maps.LatLng(p.lat, p.lng)))
+        map.setBounds(box, 24, 24, 24, 24)
+      } catch {
+        /* 못 맞춰도 지도는 그대로 쓸 수 있다 */
+      }
+    }
+
     sync()
     // 지도가 자리를 잡기 전에 한 번 더 — 처음 그릴 때 bounds 가 아직 0 인 순간이 있다
-    const settle = setTimeout(sync, 400)
+    const settle = setTimeout(() => {
+      fitIfEmpty()
+      sync()
+    }, 400)
     kakao.maps.event.addListener(map, 'idle', sync)
 
     return () => {
