@@ -66,8 +66,13 @@ function loadKakao(): Promise<KakaoNS> {
   if (w.kakao?.maps?.Map) return Promise.resolve(w.kakao)
   if (w.__kakaoMapPromise) return w.__kakaoMapPromise
 
+  // 무엇을 등록해야 하는지 화면이 직접 말하게 한다. "도메인을 등록하세요"만
+  // 적어두면, 무엇을 어디에 적어야 하는지는 여전히 사람이 찾아야 한다.
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const DOMAIN_HINT =
-    '카카오 개발자 콘솔의 [내 애플리케이션 · 플랫폼 · Web · 사이트 도메인]에 이 주소를 등록해 주세요.'
+    `카카오 개발자 콘솔 › 내 애플리케이션 › 앱 설정 › 플랫폼 › Web › 사이트 도메인에 ` +
+    `「${origin}」 를 그대로 등록해 주세요. ` +
+    `Redirect URI 가 아니라 사이트 도메인 칸이고, 이 키(${JS_KEY.slice(0, 8)}…)를 발급한 그 앱이어야 합니다.`
 
   w.__kakaoMapPromise = new Promise<KakaoNS>((resolve, reject) => {
     if (!JS_KEY) {
