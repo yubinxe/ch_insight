@@ -34,6 +34,8 @@ interface PblancRow {
 }
 
 interface CmpetRow {
+  HOUSE_TY?: string
+  MODEL_NO?: string
   SUBSCRPT_RANK_CODE?: number | string
   RESIDE_SENM?: string
   SUPLY_HSHLDCO?: number | string
@@ -72,7 +74,23 @@ async function rateOf(pblancNo: string) {
 
   const first = rows.filter(r => n(r.SUBSCRPT_RANK_CODE) === 1)
   const pool = first.length > 0 ? first : rows
-  const supply = pool.reduce((a, r) => a + n(r.SUPLY_HSHLDCO), 0)
+
+  /**
+   * 공급세대는 주택형마다 한 번만 센다.
+   *
+   * 이 API 는 같은 주택형을 거주구분(해당지역·기타경기·기타지역)으로 나눠
+   * 여러 줄로 준다. 그런데 공급세대수는 줄마다 같은 값이 반복된다. 그대로
+   * 더하면 거주구분 수만큼 부풀고, 경쟁률은 그만큼 낮아진다 —
+   * 1.4 : 1 로 끝난 단지가 '미달 0.69 : 1' 로 적히는 식이다.
+   *
+   * 신청건수는 줄마다 다르므로 그대로 더한다.
+   */
+  const perModel = new Map<string, number>()
+  for (const r of pool) {
+    const key = `${(r.HOUSE_TY ?? '').trim()}|${(r.MODEL_NO ?? '').trim()}`
+    if (!perModel.has(key)) perModel.set(key, n(r.SUPLY_HSHLDCO))
+  }
+  const supply = [...perModel.values()].reduce((a, b) => a + b, 0)
   const applied = pool.reduce((a, r) => a + n(r.REQ_CNT), 0)
   if (supply <= 0) return null
 
