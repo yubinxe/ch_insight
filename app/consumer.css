@@ -3999,3 +3999,43 @@ a.cs-pin {
     gap: 18px;
   }
 }
+
+/* ═════════════════════════════════════════════════════════
+   히어로 문구 — 한 단 더 크게, 한 겹 더 두껍게
+   첫 화면의 문구는 읽히는 것이 아니라 먼저 눈에 걸려야 한다.
+   크기를 24% 올린다 (36→45 / 4.4vw→5.46vw / 60→74).
+
+   Jalnan 은 굵기가 하나뿐인 디스플레이 서체라 font-weight 로는 더 두꺼워지지
+   않는다. 같은 색으로 획을 아주 얇게 덧대 무게만 올린다 — 서체를 바꾸지 않고
+   두께를 얻는 방법이다. 과하면 글자가 뭉치므로 0.018em 에서 멈춘다.
+   ═════════════════════════════════════════════════════════ */
+.cs-hero-title {
+  font-size: clamp(45px, 5.46vw, 74px);
+  line-height: 1.22;
+  letter-spacing: -0.028em;
+  -webkit-text-stroke: 0.018em currentColor;
+  paint-order: stroke fill;
+}
+.cs-hero-title em {
+  -webkit-text-stroke: 0.018em currentColor;
+}
+
+/* 어깨 문구도 같은 비율로 — 제목만 키우면 위가 헐거워 보인다.
+   16 × 1.24 ≈ 20. 좁은 화면에서는 제목이 줄어드니 함께 낮춘다. */
+.cs-eyebrow {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+@media (max-width: 760px) {
+  .cs-eyebrow {
+    font-size: 18px;
+  }
+}
+
+/* 제목이 커진 만큼 줄 상한도 함께 넓힌다 — em 기준이라 비율은 유지된다 */
+@media (min-width: 1001px) {
+  .cs-hero-title {
+    max-width: 17em;
+  }
+}
