@@ -247,16 +247,17 @@ export function formatMan(man: number) {
 function regionFit(customer: SearchConditions, property: Property) {
   const prefs = customer.preferredRegions
   // 시·군·구까지 똑같이 적힌 경우가 가장 정확하다. 먼저 본다.
-  if (prefs[0] === property.region) return { score: 100, kind: 'FIRST' as const }
-  if (prefs.includes(property.region)) return { score: 85, kind: 'LISTED' as const }
+  if (prefs[0] === property.region) return { score: 100, kind: 'FIRST' as const, via: property.region }
+  if (prefs.includes(property.region)) return { score: 85, kind: 'LISTED' as const, via: property.region }
   const near = prefs.find(r => (NEARBY[r] ?? []).includes(property.region))
   if (near) return { score: 50, kind: 'NEARBY' as const, via: near }
 
   // 공고는 거의 광역으로 온다. 희망지역도 광역으로 접어 견준다.
   const where = provincesOf(property)
   const wanted = prefs.map(asProvince)
-  if (where.includes(wanted[0])) return { score: 100, kind: 'FIRST' as const }
-  if (wanted.some(r => where.includes(r))) return { score: 85, kind: 'LISTED' as const }
+  if (where.includes(wanted[0])) return { score: 100, kind: 'FIRST' as const, via: wanted[0] }
+  const listed = wanted.find(r => where.includes(r))
+  if (listed) return { score: 85, kind: 'LISTED' as const, via: listed }
 
   if (property.region === NATIONWIDE || where.includes(NATIONWIDE)) {
     return { score: 40, kind: 'NATIONWIDE' as const }
@@ -372,8 +373,16 @@ function buildReasons(customer: SearchConditions, property: Property, budget: Bu
   const out: string[] = []
 
   const r = regionFit(customer, property)
-  if (r.kind === 'FIRST') out.push(`희망 1순위 지역 ${property.region}`)
-  else if (r.kind === 'LISTED') out.push(`희망지역 ${property.region}`)
+  // 고른 것은 '경기'인데 '희망 1순위 지역 의정부시' 라고 적으면, 고르지도 않은
+  // 곳을 희망지역이라 말하는 셈이 된다. 고른 지역을 먼저 적고, 공고가 더 좁게
+  // 적혀 있을 때만 그 지명을 덧붙인다.
+  const where = (label: string) => {
+    const chosen = r.via ?? property.region
+    const detail = (property.region ?? '').trim()
+    return detail && detail !== chosen ? `${label} ${chosen} · ${detail}` : `${label} ${chosen}`
+  }
+  if (r.kind === 'FIRST') out.push(where('희망 1순위 지역'))
+  else if (r.kind === 'LISTED') out.push(where('희망지역'))
   else if (r.kind === 'NEARBY') out.push(`희망하신 ${r.via} 인접 생활권`)
   else if (r.kind === 'PROVINCE') out.push(`${r.via} 전역 대상 공고 — 세부 지역은 공고문에서 확인하세요`)
   else if (r.kind === 'NATIONWIDE') out.push('전국 대상 공고 — 대상 지역은 공고문에서 확인하세요')
