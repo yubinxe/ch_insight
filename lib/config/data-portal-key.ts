@@ -13,6 +13,24 @@ export function dataPortalKey(): string {
   return (process.env.DATA_GO_KR_API_KEY ?? process.env.PUBLIC_DATA_API_KEY ?? '').trim()
 }
 
+/**
+ * 국토교통부 실거래가 전용 키.
+ *
+ * 공공데이터포털은 서비스마다 따로 활용신청을 받는다. 청약홈에 신청한 키로
+ * 실거래를 부르면 인증은 통과하면서 자료만 비어 온다 — 실패가 '자료 없음'처럼
+ * 보여서, 어느 동네에 거래가 없는 것인지 키가 막힌 것인지 구별되지 않는다.
+ *
+ * 그래서 실거래는 키를 따로 둔다. 없으면 공용 키로 물러서되, 그 경우 비어
+ * 오는 것을 자료 없음으로 읽지 않도록 호출부가 사유를 함께 남긴다.
+ */
+export function molitKey(): string {
+  return (process.env.MOLIT_API_KEY ?? '').trim() || dataPortalKey()
+}
+
+export function hasMolitKey(): boolean {
+  return molitKey().length > 0
+}
+
 /** 키가 설정돼 있는지 */
 export function hasDataPortalKey(): boolean {
   return dataPortalKey().length > 0

@@ -1,4 +1,4 @@
-import { dataPortalKey, hasDataPortalKey } from '@/lib/config/data-portal-key'
+import { molitKey, hasMolitKey } from '@/lib/config/data-portal-key'
 
 /**
  * 국토교통부 아파트 매매 실거래가.
@@ -19,6 +19,8 @@ import { dataPortalKey, hasDataPortalKey } from '@/lib/config/data-portal-key'
  */
 
 const BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade'
+/** 분양권·입주권 전매는 매매와 다른 서비스로 나온다 */
+const PRESALE_BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcSilvTrade/getRTMSDataSvcSilvTrade'
 const PYEONG = 3.3058
 /** 이보다 적게 거래된 달은 대푯값을 내지 않는다 — 한두 건으로 시세를 말할 수 없다 */
 const MIN_PER_MONTH = 3
@@ -133,9 +135,22 @@ function normalize(items: RawItem[], ym: string): TradeDeal[] {
     .filter((d): d is TradeDeal => d !== null)
 }
 
+/** 응답 XML 에서 항목을 뽑는다. 매매와 전매가 같은 모양으로 온다 */
+function parseItems(body: string, ym: string): TradeDeal[] {
+  const items: RawItem[] = []
+  for (const m of body.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+    const row: RawItem = {}
+    for (const f of m[1].matchAll(/<([A-Za-z가-힣_]+)>([\s\S]*?)<\/\1>/g)) {
+      row[f[1]] = f[2].trim()
+    }
+    items.push(row)
+  }
+  return normalize(items, ym)
+}
+
 async function fetchMonth(lawdCd: string, ym: string): Promise<TradeDeal[]> {
   const params = new URLSearchParams({
-    serviceKey: dataPortalKey(),
+    serviceKey: molitKey(),
     LAWD_CD: lawdCd,
     DEAL_YMD: ym,
     numOfRows: '1000',
@@ -150,15 +165,66 @@ async function fetchMonth(lawdCd: string, ym: string): Promise<TradeDeal[]> {
     throw new Error('실거래 인증키가 거부되었습니다 (활용신청 확인 필요)')
   }
 
-  const items: RawItem[] = []
-  for (const m of body.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
-    const row: RawItem = {}
-    for (const f of m[1].matchAll(/<([A-Za-z가-힣_]+)>([\s\S]*?)<\/\1>/g)) {
-      row[f[1]] = f[2].trim()
+  return parseItems(body, ym)
+}
+
+/**
+ * 분양권·입주권 전매.
+ *
+ * 매매 실거래는 이미 지어진 아파트고, 거기에는 지은 지 삼십 년 된 단지도
+ * 섞여 있다. 새로 분양하는 집의 값을 그것과만 견주면 늘 "비싸다"가 나온다.
+ *
+ * 분양권은 아직 짓는 중인 물건이다 — 새 분양과 같은 줄에 선다. 의정부에서
+ * 재어 보면 매매 중앙값이 평당 1,292만원인데 전매는 3,177만원이었다. 두 배
+ * 넘게 벌어진다. 어느 쪽과 견주느냐에 따라 같은 분양가가 비싸 보이기도 하고
+ * 싸 보이기도 하므로, 둘 다 보여주고 무엇과 견준 값인지 적는다.
+ */
+export interface PresaleStat {
+  count: number
+  medianPerPyeong: number | null
+  months: number
+  ok: boolean
+  reason: string | null
+}
+
+export async function fetchPresaleStat(
+  lawdCd: string | null,
+  { months = 6 }: { months?: number } = {},
+): Promise<PresaleStat> {
+  const code = (lawdCd ?? '').trim().slice(0, 5)
+  const none: PresaleStat = { count: 0, medianPerPyeong: null, months, ok: false, reason: null }
+  if (code.length !== 5 || !hasMolitKey()) return none
+
+  try {
+    const batches = await Promise.all(
+      recentMonths(months).map(async ym => {
+        const params = new URLSearchParams({
+          serviceKey: molitKey(),
+          LAWD_CD: code,
+          DEAL_YMD: ym,
+          numOfRows: '500',
+          pageNo: '1',
+        })
+        const res = await fetch(`${PRESALE_BASE}?${params}`, { next: { revalidate: 21600 } })
+        if (!res.ok) throw new Error(`전매 응답 ${res.status}`)
+        const body = await res.text()
+        if (body.includes('<returnAuthMsg>') && !body.includes('<item>')) {
+          throw new Error('전매 인증키가 거부되었습니다 (활용신청 확인 필요)')
+        }
+        return parseItems(body, ym)
+      }),
+    )
+    const all = batches.flat()
+    return {
+      count: all.length,
+      medianPerPyeong: median(all.map(d => d.perPyeong)),
+      months,
+      ok: true,
+      reason: all.length === 0 ? '해당 기간에 신고된 전매가 없습니다.' : null,
     }
-    items.push(row)
+  } catch (err) {
+    return { ...none, reason: err instanceof Error ? err.message : '전매를 불러오지 못했습니다.' }
   }
-  return normalize(items, ym)
 }
 
 /**
@@ -173,7 +239,7 @@ export async function fetchTradeStat(
   { months = 12 }: { months?: number } = {},
 ): Promise<TradeStat> {
   const code = (lawdCd ?? '').trim().slice(0, 5)
-  if (code.length !== 5 || !hasDataPortalKey()) return EMPTY
+  if (code.length !== 5 || !hasMolitKey()) return EMPTY
 
   try {
     const yms = recentMonths(months)

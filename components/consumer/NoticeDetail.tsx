@@ -29,6 +29,7 @@ interface TradeStat {
   reason: string | null
   dong: string | null
   sigungu: string | null
+  presale: { count: number; medianPerPyeong: number | null; months: number } | null
 }
 
 interface RegionStat {
@@ -399,6 +400,54 @@ export default function NoticeDetail({ id }: { id: string }) {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {trade!.presale?.medianPerPyeong && (
+              <div className="cs-bench">
+                <div className="cs-bench__k">분양권 전매와 견주면</div>
+                <p className="cs-pro__p" style={{ margin: '0 0 12px' }}>
+                  같은 시·군·구에서 최근 {trade!.presale.months}개월 <strong>{trade!.presale.count}건</strong>의
+                  분양권·입주권이 손바뀜했고, 전용 평당 중앙값은{' '}
+                  <strong>{trade!.presale.medianPerPyeong.toLocaleString()}만원</strong>입니다.
+                </p>
+                <div className="cs-models">
+                  <table className="cs-table">
+                    <thead>
+                      <tr>
+                        <th>주택형</th>
+                        <th className="cs-table__r">분양가</th>
+                        <th className="cs-table__r">전매 시세 환산액</th>
+                        <th className="cs-table__r">차이</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {supplyModels.map(m => {
+                        if (m.exclusiveArea === null || m.topAmount === null) return null
+                        const around = Math.round(trade!.presale!.medianPerPyeong! * (m.exclusiveArea / 3.3058))
+                        const gap = m.topAmount - around
+                        return (
+                          <tr key={`ps-${m.name}`}>
+                            <td className="cs-table__key">{m.name}</td>
+                            <td className="cs-num cs-table__r">{formatMan(m.topAmount)}</td>
+                            <td className="cs-num cs-table__r">{formatMan(around)}</td>
+                            <td className="cs-num cs-table__r">
+                              <span className="cs-gap" data-over={gap > 0}>
+                                {gap > 0 ? '+' : gap < 0 ? '−' : ''}
+                                {formatMan(Math.abs(gap))}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="cs-note" style={{ marginTop: 12 }}>
+                  매매 실거래에는 지은 지 오래된 단지도 섞여 있어, 새로 분양하는 집을 그것과만 견주면
+                  대체로 비싸게 나옵니다. 분양권은 아직 짓는 중인 물건이라 같은 줄에 섭니다. 두 값이
+                  크게 다를 수 있으니 무엇과 견준 숫자인지 함께 보아 주세요.
+                </p>
               </div>
             )}
 

@@ -1,7 +1,7 @@
 import { propertyById } from '@/lib/crm/store'
 import { findOfficialProperty } from '@/lib/consumer/official'
 import { fetchSupplyModels } from '@/lib/adapters/applyhome-models'
-import { fetchTradeStat } from '@/lib/adapters/molit-trade'
+import { fetchTradeStat, fetchPresaleStat } from '@/lib/adapters/molit-trade'
 import { geocode, isGeocodingConfigured } from '@/lib/consumer/geocode'
 import { checkUrgency, buildCandidate } from '@/lib/crm/services/scoring'
 import { buildTasks } from '@/lib/crm/services/scheduling'
@@ -61,9 +61,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       property.dataOrigin === 'OFFICIAL' && isGeocodingConfigured()
         ? await geocode(property.address).catch(() => null)
         : null
-    const trade = where?.bCode
-      ? await fetchTradeStat(where.bCode, where.dong)
-      : null
+    const [trade, presale] = where?.bCode
+      ? await Promise.all([fetchTradeStat(where.bCode, where.dong), fetchPresaleStat(where.bCode)])
+      : [null, null]
 
     track(session, 'notice_viewed', { propertyId: property.id })
 
@@ -80,6 +80,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
             ...trade,
             dong: where?.dong ?? null,
             sigungu: where?.sigungu ?? null,
+            presale: presale && presale.ok && presale.count > 0 ? presale : null,
           }
         : null,
     })

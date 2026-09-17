@@ -5003,3 +5003,16 @@ a.cs-pin:hover {
   padding-top: 20px;
   border-top: 1px solid var(--line);
 }
+
+/* 전매 비교 — 매매와 다른 견줌자라 칸을 나눈다 */
+.cs-bench {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.cs-bench__k {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--title);
+  margin-bottom: 8px;
+}
