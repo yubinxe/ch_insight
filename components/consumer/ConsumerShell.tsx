@@ -9,8 +9,9 @@ const NAV = [
   { href: '/notices', label: '공고 찾기' },
   { href: '/guide', label: '청약 가이드' },
   { href: '/saved', label: '관심공고' },
+  { href: '/news', label: '청약뉴스' },
   { href: '/score', label: '가점 계산' },
-  { href: '/stats', label: '경쟁률·당첨통계' },
+  { href: '/stats', label: '경쟁률·통계' },
 ]
 
 export default function ConsumerShell({ children }: { children: ReactNode }) {

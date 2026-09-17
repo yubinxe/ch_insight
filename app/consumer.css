@@ -2833,3 +2833,101 @@ body:has(.cs-ticker) .cs-chat {
   border-color: var(--brand);
   color: var(--paper);
 }
+
+/* ─────────────────────────────────────────────────────────
+   청약뉴스 — 목록은 기사 제목이 주인이다
+   카드로 감싸지 않는다. 카드는 우리가 만든 물건처럼 보이게 하고,
+   이 지면의 내용은 전부 남의 것이다. 괘선으로만 나눈다.
+   ───────────────────────────────────────────────────────── */
+.cs-newstabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.cs-newstab {
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--body);
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+.cs-newstab:hover {
+  border-color: var(--line-ink);
+}
+.cs-newstab[data-on='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--paper);
+}
+
+.cs-news {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line-ink);
+}
+.cs-news__item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cs-news__index {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  padding-top: 3px;
+}
+.cs-news__title {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  color: var(--title);
+  text-decoration: none;
+}
+.cs-news__title:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.cs-news__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* 매체명은 기사의 주인이다. 시각보다 진하게 둔다 */
+.cs-news__source {
+  font-weight: 600;
+  color: var(--body);
+}
+@media (min-width: 1001px) {
+  .cs-news__title {
+    max-width: 46em;
+  }
+}
+@media (max-width: 640px) {
+  .cs-news__item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .cs-news__index {
+    display: none;
+  }
+  .cs-news__title {
+    font-size: 17px;
+  }
+}
