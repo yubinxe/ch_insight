@@ -266,6 +266,8 @@ export interface SearchProfile {
 export interface ConsumerUser {
   id: string
   email: string
+  /** 로그인에 쓰는 아이디. 이메일과 함께 둘 다 열쇠가 된다 */
+  username: string
   nickname: string
   createdAt: string
 }

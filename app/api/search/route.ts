@@ -2,7 +2,6 @@ import { checkMutation } from '@/lib/consumer/security'
 import { NextRequest } from 'next/server'
 import { resolveSession } from '@/lib/consumer/session'
 import { saveProfile, track } from '@/lib/consumer/store'
-import { getState } from '@/lib/crm/store'
 import { listOfficialProperties } from '@/lib/consumer/official'
 import * as repo from '@/lib/db/repo'
 import { trackBehavior } from '@/lib/services/pipeline'
@@ -83,10 +82,11 @@ export async function POST(req: NextRequest) {
       preferredHousingTypes: housingTypes,
     }
 
-    // 실제 공고 + 예시 공고를 함께 평가한다. 각 후보는 dataOrigin 으로 구분된다.
-    const state = getState()
+    // 실제 공고만 평가한다. 예시는 화면 구성을 보여주려고 만든 것이라
+    // 후보로 내놓으면 지원할 수 없는 공고를 권하는 셈이 된다.
+    // 맞는 공고가 없으면 없다고 말한다 — 예시로 자리를 메우지 않는다.
     const official = await listOfficialProperties({ limit: 200 })
-    const outcome = findCandidatesForCustomer(searcher, [...official, ...state.properties], { now })
+    const outcome = findCandidatesForCustomer(searcher, official, { now })
     const officialInResult =
       outcome.primary.filter(r => r.property.dataOrigin === 'OFFICIAL').length +
       outcome.relaxed.filter(r => r.property.dataOrigin === 'OFFICIAL').length

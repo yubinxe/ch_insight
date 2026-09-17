@@ -8,6 +8,11 @@ export function isEmailShaped(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
 }
 
+/** 서버(`USERNAME_RULE`)와 같은 규칙. 두 곳이 어긋나면 폼은 통과하고 서버가 막는다 */
+export function isUsernameShaped(v: string) {
+  return /^[a-z0-9_]{4,20}$/.test(v.trim().toLowerCase())
+}
+
 /**
  * 계정 입력 한 벌 — 로그인 지면과 저장 모달이 같은 것을 쓴다.
  *
@@ -58,6 +63,107 @@ export function EmailField({
           이메일 주소 형태가 아니에요. `name@example.com` 처럼 적어주세요.
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * 아이디 — 로그인에 쓰는 이름.
+ *
+ * 이메일만으로 들어오는 계정은 주소를 통째로 외워 적어야 한다.
+ * 짧은 아이디를 함께 두면 다음 방문이 가벼워진다.
+ * 대소문자를 구분하지 않으므로 입력하는 동안 소문자로 내린다 —
+ * 가입할 때 대문자로 적고 로그인에서 막히는 일을 없앤다.
+ */
+export function UsernameField({
+  value,
+  onChange,
+  autoFocus,
+  disabled,
+}: {
+  value: string
+  onChange: (v: string) => void
+  autoFocus?: boolean
+  disabled?: boolean
+}) {
+  const id = useId()
+  const [touched, setTouched] = useState(false)
+  const bad = touched && value.trim().length > 0 && !isUsernameShaped(value)
+
+  return (
+    <div className="cs-field">
+      <div className="cs-field__row">
+        <label className="cs-field__label" htmlFor={id}>
+          아이디
+        </label>
+        <span className="cs-note" aria-hidden="true">
+          영문·숫자 4~20자
+        </span>
+      </div>
+      <input
+        id={id}
+        className="cs-input"
+        type="text"
+        autoComplete="username"
+        placeholder="zipcatch_user"
+        value={value}
+        autoFocus={autoFocus}
+        disabled={disabled}
+        maxLength={20}
+        aria-invalid={bad}
+        aria-describedby={bad ? `${id}-msg` : undefined}
+        onChange={e => onChange(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+        onBlur={() => setTouched(true)}
+        required
+      />
+      {bad && (
+        <p className="cs-field__msg" data-tone="bad" id={`${id}-msg`}>
+          영문 소문자·숫자·밑줄 4~20자로 적어주세요.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * 로그인 입력 한 칸 — 아이디와 이메일을 가리지 않는다.
+ *
+ * "아이디로 가입했나 이메일로 가입했나"를 사용자가 기억하게 만들 이유가 없다.
+ * 한 칸으로 받고 서버가 `@` 유무로 갈라 본다.
+ */
+export function IdentifierField({
+  value,
+  onChange,
+  autoFocus,
+  disabled,
+}: {
+  value: string
+  onChange: (v: string) => void
+  autoFocus?: boolean
+  disabled?: boolean
+}) {
+  const id = useId()
+
+  return (
+    <div className="cs-field">
+      <div className="cs-field__row">
+        <label className="cs-field__label" htmlFor={id}>
+          아이디 또는 이메일
+        </label>
+      </div>
+      <input
+        id={id}
+        className="cs-input"
+        type="text"
+        autoComplete="username"
+        placeholder="zipcatch_user 또는 name@example.com"
+        value={value}
+        autoFocus={autoFocus}
+        disabled={disabled}
+        maxLength={254}
+        onChange={e => onChange(e.target.value)}
+        required
+      />
     </div>
   )
 }

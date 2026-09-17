@@ -2401,3 +2401,130 @@ body:has(.cs-ticker) .cs-chat {
   color: var(--muted);
   line-height: 1.5;
 }
+
+/* ─────────────────────────────────────────────────────────
+   랜딩 가독성 보정 — 굵기와 크기
+   지면이 담백한 대신 본문이 가늘어 첫 화면에서 눈에 잘 안 걸렸다.
+   색을 더 쓰지 않고 굵기와 크기만 한 단씩 올린다. 주묵은 그대로 아낀다.
+   ───────────────────────────────────────────────────────── */
+
+/* 히어로 미리보기 카드의 머리말 — 목록 카드의 일련번호와는 다른 물건이라
+   같은 클래스를 쓰지 않는다. 카드가 무엇을 보여주는지 한눈에 읽혀야 한다. */
+.cs-preview__label {
+  display: block;
+  margin-bottom: 18px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  color: var(--title);
+}
+
+/* 본문 — 회색조를 유지하되 한 단 진하고 굵게 */
+.cs-lead {
+  font-weight: 500;
+  color: var(--title);
+}
+.cs-sub {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--body);
+}
+.cs-note {
+  font-size: 14px;
+}
+
+/* 마지막 CTA — 지면의 끝이자 행동을 청하는 자리다. 가장 굵게 둔다 */
+.cs-cta-band .cs-section-title,
+.cs-cta-band h2 {
+  font-weight: 700;
+  letter-spacing: -0.032em;
+}
+.cs-cta-band .cs-sub {
+  font-size: 18px;
+  color: color-mix(in srgb, var(--paper) 82%, transparent);
+}
+
+/* FAQ — 답변 앞의 A. 는 세로로 흐르는 눈이 답을 찾는 표지다 */
+.cs-faq__mark {
+  margin-right: 8px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-weight: 700;
+  color: var(--accent);
+}
+.cs-faq__a {
+  font-size: 17px;
+}
+
+/* ─────────────────────────────────────────────────────────
+   PC 조판 보정 — 줄 길이와 줄 분배
+   모바일은 화면 폭이 자연스러운 상한 역할을 하지만, 데스크톱에서는
+   1264px 지면에 한글 본문이 한 줄 70~90자로 늘어나 눈이 다음 줄 첫 글자를
+   잃는다. 제목도 여러 줄로 갈 때 마지막 줄에 한 단어만 떨어져 균형이 깨진다.
+   word-break: keep-all 은 이미 있어 단어는 안 깨졌다 — 문제는 줄 길이였다.
+   1440px 실측: /guide CTA 1200px·92자 → 598px·46자, 홈 .cs-sub 1038px·61자 → 782px·46자.
+   모바일 조판은 건드리지 않는다.
+   ───────────────────────────────────────────────────────── */
+@media (min-width: 1001px) {
+  /* 제목 — 줄을 고르게 나눠 마지막 줄 외톨이 단어를 없앤다 */
+  .cs-hero-title,
+  .cs-section-title,
+  .cs-page-title,
+  .cs h1,
+  .cs h2,
+  .cs h3 {
+    text-wrap: balance;
+  }
+
+  /* 본문 — 마지막 줄이 한 단어로 끝나지 않게 한다 */
+  .cs-lead,
+  .cs-sub,
+  .cs-note,
+  .cs p {
+    text-wrap: pretty;
+  }
+
+  /* 읽는 줄의 길이 상한. 컨테이너를 좁히지 않고 글 덩어리에만 건다 */
+  .cs-lead {
+    max-width: 42em;
+  }
+  .cs-sub {
+    max-width: 46em;
+  }
+  .cs-note {
+    max-width: 54em;
+  }
+  .cs p {
+    max-width: 46em;
+  }
+  .cs-hero-title {
+    max-width: 18em;
+  }
+  .cs-sec-head__body .cs-section-title {
+    max-width: 24em;
+  }
+
+  /* 카드 안 본문은 카드 폭이 이미 측정 폭 역할을 한다 */
+  .cs-card p,
+  .cs-card .cs-sub,
+  .cs-card .cs-note,
+  .cs-card .cs-lead,
+  .cs-nearby .cs-nearby__desc,
+  .cs-cta-band .cs-sub {
+    max-width: none;
+  }
+  /* 가운데 정렬 지면은 상한을 중앙에 맞춰 세운다 */
+  .cs-cta-band .cs-sub {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 46em;
+  }
+}
+
+/* 넓은 화면에서 지면이 과하게 벌어지지 않게 한다 */
+@media (min-width: 1600px) {
+  .cs {
+    --maxw: 1360px;
+  }
+}

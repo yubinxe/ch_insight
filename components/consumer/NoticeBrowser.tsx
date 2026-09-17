@@ -74,7 +74,7 @@ export default function NoticeBrowser() {
     <div className="cs-wrap" style={{ paddingTop: 44 }}>
       <h1 className="cs-page-title">모집 중인 공고</h1>
       <p className="cs-sub" style={{ marginTop: 12 }}>
-        접수 마감이 가까운 순으로 보여드려요.{' '}
+        분양을 먼저, 그 안에서 접수 마감이 가까운 순으로 보여드려요.{' '}
         <Link href="/analyze" className="cs-btn cs-btn--text" style={{ padding: 0 }}>
           내 조건으로 좁혀보기
         </Link>
@@ -155,11 +155,10 @@ export default function NoticeBrowser() {
         </>
       )}
 
-      {/* 실제 공고가 섞여 있을 때만 적는다. 0건일 때는 위 안내가 이미 말했다. */}
-      {officialCount > 0 && rows.length > officialCount && (
+      {officialCount > 0 && (
         <p className="cs-note" style={{ marginTop: 24 }}>
-          목록에는 실제 공고 {officialCount}건과 화면 구성을 위한 예시{' '}
-          {rows.length - officialCount}건이 함께 있습니다. 카드의 배지로 구분해 주세요.
+          공공데이터포털 청약홈·LH 청약플러스에서 모은 실제 모집공고입니다. 분양을 앞에 두고, 그 안에서
+          접수 마감이 가까운 순으로 보여드려요.
         </p>
       )}
     </div>

@@ -32,6 +32,8 @@ interface ConsumerState {
   sessions: Map<string, ConsumerSession>
   users: Map<string, ConsumerUser>
   usersByEmail: Map<string, string>
+  /** 아이디 → userId. 이메일과 같은 자격의 열쇠라 색인도 나란히 둔다 */
+  usersByUsername: Map<string, string>
   saved: SavedNotice[]
   alerts: AlertSubscription[]
   events: ConsumerEvent[]
@@ -68,6 +70,10 @@ function serialize(s: ConsumerState) {
     sessions: [...s.sessions],
     users: [...s.users],
     usersByEmail: [...s.usersByEmail],
+    // 아이디 색인은 나중에 생겼다. 배포가 도는 동안 이 항목이 없는 상태가
+    // 메모리에 남아 있을 수 있으므로, 없으면 빈 색인으로 내보낸다 —
+    // 여기서 터지면 저장 전체가 멈춘다.
+    usersByUsername: [...(s.usersByUsername ?? new Map())],
     credentials: [...s.credentials],
     profiles: [...s.profiles],
   }
@@ -79,6 +85,7 @@ function deserialize(saved: ReturnType<typeof serialize>): ConsumerState {
     sessions: new Map(saved.sessions),
     users: new Map(saved.users),
     usersByEmail: new Map(saved.usersByEmail),
+    usersByUsername: new Map(saved.usersByUsername ?? []),
     credentials: new Map(saved.credentials ?? []),
     profiles: new Map(saved.profiles ?? []),
   }
@@ -157,6 +164,7 @@ function getState(): ConsumerState {
       sessions: new Map(),
       users: new Map(),
       usersByEmail: new Map(),
+      usersByUsername: new Map(),
       saved: [],
       alerts: [],
       events: [],
@@ -236,27 +244,74 @@ export class EmailInUseError extends Error {
   }
 }
 
-/**
- * 가입. 같은 세션의 가입 전 탐색 기록(관심공고·알림)을 계정에 연결한다.
- * 비밀번호 인증은 아직 구현하지 않았으므로 실서비스 인증이라고 표시하지 않는다.
- */
-export function signUp(sessionId: string, email: string, nickname: string, password: string) {
-  const state = getState()
-  const normalized = email.trim().toLowerCase()
+/** 아이디 규칙 — 영문 소문자·숫자·밑줄, 4~20자. 이메일 모양은 아이디로 받지 않는다 */
+export const USERNAME_RULE = /^[a-z0-9_]{4,20}$/
 
+export class UsernameInUseError extends Error {
+  constructor() {
+    super('이미 사용 중인 아이디입니다.')
+    this.name = 'UsernameInUseError'
+  }
+}
+
+export function normalizeUsername(v: string) {
+  return v.trim().toLowerCase()
+}
+
+/**
+ * 아이디 색인을 보장한다.
+ *
+ * 색인은 나중에 생긴 물건이라, 옛 문서에서 올라온 상태나 배포 중간에 남아 있던
+ * 상태에는 없을 수 있다. 읽기 직전에 한 번 세워 두면 호출부마다 방어할 필요가 없다.
+ */
+function usernameIndex(state: ConsumerState) {
+  if (!state.usersByUsername) {
+    state.usersByUsername = new Map(
+      [...state.users.values()].filter(u => u.username).map(u => [u.username, u.id]),
+    )
+  }
+  return state.usersByUsername
+}
+
+/**
+ * 가입.
+ *
+ * 아이디와 이메일을 함께 받는다. 이메일만 받으면 다음 방문마다 주소를 통째로
+ * 적어야 하고, 아이디만 받으면 알림을 보낼 곳이 없다. 둘 다 열쇠가 된다.
+ * 같은 세션의 가입 전 탐색 기록(관심공고·알림)은 계정으로 승계한다.
+ */
+export function signUp(
+  sessionId: string,
+  input: { email: string; username: string; nickname?: string; password: string },
+) {
+  const state = getState()
+  const byUsername = usernameIndex(state)
+  const normalized = input.email.trim().toLowerCase()
+  const username = normalizeUsername(input.username)
+
+  if (!USERNAME_RULE.test(username)) {
+    throw new Error('아이디는 영문 소문자·숫자·밑줄 4~20자로 입력해 주세요.')
+  }
   if (state.usersByEmail.has(normalized)) throw new EmailInUseError()
-  if (!password || password.length < 12 || password.length > 128) throw new Error('비밀번호는 12~128자로 입력해 주세요.')
+  if (byUsername.has(username)) throw new UsernameInUseError()
+  if (!input.password || input.password.length < 12 || input.password.length > 128) {
+    throw new Error('비밀번호는 12~128자로 입력해 주세요.')
+  }
   const salt = randomBytes(16).toString('hex')
-  const hash = scryptSync(password, salt, 64).toString('hex')
+  const hash = scryptSync(input.password, salt, 64).toString('hex')
 
   const user: ConsumerUser = {
     id: randomUUID(),
     email: normalized,
-    nickname: nickname.trim() || normalized.split('@')[0],
+    username,
+    // 부르는 이름을 따로 받지 않았으면 아이디를 쓴다. 이메일 앞자리는
+    // 본명이나 소속이 드러나는 경우가 있어 기본값으로 삼지 않는다.
+    nickname: (input.nickname ?? '').trim() || username,
     createdAt: nowIso(),
   }
   state.users.set(user.id, user)
   state.usersByEmail.set(normalized, user.id)
+  byUsername.set(username, user.id)
   state.credentials.set(user.id, `${salt}:${hash}`)
 
   const session = getSession(sessionId)
@@ -272,9 +327,17 @@ export function signUp(sessionId: string, email: string, nickname: string, passw
   return user
 }
 
-export function logIn(sessionId: string, email: string, password: string) {
+/**
+ * 아이디 또는 이메일로 로그인한다.
+ *
+ * 어느 쪽으로 들어왔는지 되묻지 않는다. `@` 가 있으면 이메일로 보고, 없으면
+ * 아이디로 본다. 둘 다 못 찾아도 비밀번호 비교는 그대로 수행한다 —
+ * 일찍 돌아가면 응답 시간만으로 계정 존재 여부가 새어 나간다.
+ */
+export function logIn(sessionId: string, identifier: string, password: string) {
   const state = getState()
-  const userId = state.usersByEmail.get(email.trim().toLowerCase())
+  const key = identifier.trim().toLowerCase()
+  const userId = key.includes('@') ? state.usersByEmail.get(key) : usernameIndex(state).get(key)
   const stored = userId ? state.credentials.get(userId) : null
   const [salt, hash] = stored?.split(':') ?? ['missing-account', '00'.repeat(64)]
   const computed = scryptSync(password, salt, 64)

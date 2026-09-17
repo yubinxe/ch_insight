@@ -10,7 +10,16 @@ import {
   type ReactNode,
 } from 'react'
 import { useConsumer } from './ConsumerProvider'
-import { AuthSwitch, EmailField, PasswordField, isEmailShaped, MIN_PASSWORD } from './AuthFields'
+import {
+  AuthSwitch,
+  EmailField,
+  IdentifierField,
+  PasswordField,
+  UsernameField,
+  isEmailShaped,
+  isUsernameShaped,
+  MIN_PASSWORD,
+} from './AuthFields'
 import type { PendingIntentKind } from '@/lib/crm/types'
 
 interface GateRequest {
@@ -75,6 +84,8 @@ export default function SignupGate({ children }: { children: ReactNode }) {
   const { user, refresh } = useConsumer()
   const [req, setReq] = useState<GateRequest | null>(null)
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loginMode, setLoginMode] = useState(false)
   const panel = useRef<HTMLDivElement>(null)
@@ -131,7 +142,9 @@ export default function SignupGate({ children }: { children: ReactNode }) {
         const res = await fetch(loginMode ? '/api/auth/login' : '/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify(
+            loginMode ? { identifier, password } : { email, username, password },
+          ),
         })
         const json = await res.json().catch(() => null)
         if (!res.ok) {
@@ -230,7 +243,14 @@ export default function SignupGate({ children }: { children: ReactNode }) {
                       disabled={busy}
                     />
                     <div key={loginMode ? 'login' : 'signup'} className="cs-swap">
-                      <EmailField value={email} onChange={setEmail} disabled={busy} />
+                      {loginMode ? (
+                        <IdentifierField value={identifier} onChange={setIdentifier} disabled={busy} />
+                      ) : (
+                        <>
+                          <UsernameField value={username} onChange={setUsername} disabled={busy} />
+                          <EmailField value={email} onChange={setEmail} disabled={busy} />
+                        </>
+                      )}
                       <PasswordField
                         value={password}
                         onChange={setPassword}
@@ -269,7 +289,12 @@ export default function SignupGate({ children }: { children: ReactNode }) {
                   data-busy={busy}
                   disabled={
                     busy ||
-                    (!user && (!isEmailShaped(email) || password.length < MIN_PASSWORD)) ||
+                    (!user &&
+                      (loginMode
+                        ? !identifier.trim() || password.length === 0
+                        : !isEmailShaped(email) ||
+                          !isUsernameShaped(username) ||
+                          password.length < MIN_PASSWORD)) ||
                     (needsConsent && !consent)
                   }
                 >

@@ -4,7 +4,16 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { useConsumer } from './ConsumerProvider'
-import { AuthSwitch, EmailField, PasswordField, isEmailShaped, MIN_PASSWORD } from './AuthFields'
+import {
+  AuthSwitch,
+  EmailField,
+  IdentifierField,
+  PasswordField,
+  UsernameField,
+  isEmailShaped,
+  isUsernameShaped,
+  MIN_PASSWORD,
+} from './AuthFields'
 
 /** 로그인 뒤 돌아갈 곳. 외부 주소로 튕기지 않게 같은 사이트 경로만 받는다 */
 function safeNext(raw: string | null): string | null {
@@ -21,11 +30,17 @@ export default function LoginView() {
 
   const [mode, setMode] = useState<'login' | 'signup'>('signup')
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  /** 로그인 한 칸 — 아이디든 이메일이든 여기로 들어온다 */
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const ready = isEmailShaped(email) && (mode === 'login' || password.length >= MIN_PASSWORD)
+  const ready =
+    mode === 'login'
+      ? identifier.trim().length > 0 && password.length > 0
+      : isEmailShaped(email) && isUsernameShaped(username) && password.length >= MIN_PASSWORD
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,7 +51,9 @@ export default function LoginView() {
       const res = await fetch(mode === 'signup' ? '/api/auth/signup' : '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(
+          mode === 'signup' ? { email, username, password } : { identifier, password },
+        ),
       })
       const json = await res.json().catch(() => null)
       if (!res.ok) {
@@ -126,7 +143,14 @@ export default function LoginView() {
         <AuthSwitch mode={mode} onChange={m => { setMode(m); setError(null) }} disabled={busy} />
 
         <form onSubmit={submit} key={mode} className="cs-swap">
-          <EmailField value={email} onChange={setEmail} disabled={busy} />
+          {mode === 'signup' ? (
+            <>
+              <UsernameField value={username} onChange={setUsername} disabled={busy} />
+              <EmailField value={email} onChange={setEmail} disabled={busy} />
+            </>
+          ) : (
+            <IdentifierField value={identifier} onChange={setIdentifier} disabled={busy} />
+          )}
           <PasswordField
             value={password}
             onChange={setPassword}

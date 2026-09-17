@@ -84,8 +84,7 @@ export default function ConsumerShell({ children }: { children: ReactNode }) {
             집캐치는 공개된 공고 정보를 정리해 보여드리는 참고 서비스입니다. 자격 판정과 당첨 여부를
             확정하지 않으며, 신청 전 반드시 공식 모집공고문을 확인해 주세요.
             <br />
-            공고·통계 출처: 공공데이터포털 청약홈 OpenAPI · 한국부동산원 · 현재 표시되는 임대 공고는 화면 구성을
-            보여주기 위한 예시 데이터입니다.
+            공고·통계 출처: 공공데이터포털 청약홈 OpenAPI · LH 청약플러스 · 한국부동산원.
           </p>
         </div>
       </footer>

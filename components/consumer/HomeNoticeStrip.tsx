@@ -74,7 +74,7 @@ export default function HomeNoticeStrip() {
         <div className="cs-sec-head__body">
           <h2 className="cs-section-title">지금 살펴볼 모집공고</h2>
           <p className="cs-sub" style={{ marginTop: 12 }}>
-            접수 마감이 가까운 순으로 보여드려요.
+            분양을 먼저, 그 안에서 접수 마감이 가까운 순으로 보여드려요.
           </p>
         </div>
         <Link href="/notices" className="cs-btn cs-btn--text">
@@ -152,11 +152,9 @@ export default function HomeNoticeStrip() {
         </>
       )}
 
-      {/* 실제 공고가 섞여 있을 때만 적는다. 0건이면 위 안내가 이미 말했다. */}
-      {officialCount > 0 && rows.length > officialCount && (
+      {officialCount > 0 && (
         <p className="cs-note" style={{ marginTop: 18 }}>
-          실제 공고 {officialCount}건과 화면 구성을 위한 예시 {rows.length - officialCount}건이 함께
-          있습니다.
+          공공데이터포털 청약홈·LH 청약플러스에서 모은 실제 모집공고입니다.
         </p>
       )}
     </section>
