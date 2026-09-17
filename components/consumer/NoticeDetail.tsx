@@ -38,6 +38,18 @@ interface RegionStat {
   scores: { kind: string; lowest: number | null; average: number | null; highest: number | null; months: number }[]
 }
 
+interface NearbyItem {
+  name: string
+  kind: string
+  area: string
+  resultDate: string | null
+  scope: 'REGION' | 'PROVINCE'
+  supply: number
+  applied: number
+  rate: number
+  under: boolean
+}
+
 interface DetailResponse {
   property: Property
   urgency: UrgencyInfo
@@ -55,6 +67,8 @@ export default function NoticeDetail({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null)
   /** 이 지역이 요즘 어느 정도로 붐비는지. 공고 본문과 별개로 늦게 와도 된다 */
   const [region, setRegion] = useState<RegionStat | null>(null)
+  /** 근처에서 최근에 끝난 청약 — 지역 평균보다 가까운 참고다 */
+  const [nearby, setNearby] = useState<NearbyItem[]>([])
 
   useEffect(() => {
     let alive = true
@@ -94,6 +108,28 @@ export default function NoticeDetail({ id }: { id: string }) {
       alive = false
     }
   }, [province])
+
+  const sigungu = data?.property.region?.trim() ?? ''
+  const pblancNo = (data?.property.announcementId ?? '').split('-').pop() ?? ''
+  useEffect(() => {
+    if (!province && !sigungu) return
+    let alive = true
+    const q = new URLSearchParams()
+    if (sigungu) q.set('region', sigungu)
+    if (province) q.set('province', province)
+    if (pblancNo) q.set('exclude', pblancNo)
+    fetch(`/api/competition/nearby?${q}`, { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((json: { items?: NearbyItem[] } | null) => {
+        if (alive && json?.items) setNearby(json.items)
+      })
+      .catch(() => {
+        /* 곁들이는 참고다 */
+      })
+    return () => {
+      alive = false
+    }
+  }, [province, sigungu, pblancNo])
 
   if (loading) {
     return (
@@ -478,6 +514,48 @@ export default function NoticeDetail({ id }: { id: string }) {
                 <Link href="/score" className="cs-btn cs-btn--sm cs-btn--ghost" style={{ marginTop: 14 }}>
                   내 가점 계산해 비교하기
                 </Link>
+              </div>
+            )}
+
+            {nearby.length > 0 && (
+              <div className="cs-near">
+                <div className="cs-note" style={{ marginBottom: 10 }}>
+                  근처에서 최근에 끝난 청약 — 같은 시·군·구를 먼저, 모자라면 같은 시·도에서
+                </div>
+                <div className="cs-models">
+                  <table className="cs-table">
+                    <thead>
+                      <tr>
+                        <th>단지</th>
+                        <th className="cs-table__r">1순위 경쟁률</th>
+                        <th className="cs-table__r">공급 · 신청</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nearby.map(nb => (
+                        <tr key={`${nb.name}-${nb.resultDate}`}>
+                          <td className="cs-table__key">
+                            {nb.name}
+                            <span className="cs-table__sub">
+                              {nb.area} · {nb.kind}
+                              {nb.resultDate && ` · 발표 ${nb.resultDate}`}
+                              {nb.scope === 'REGION' && ' · 같은 시·군·구'}
+                            </span>
+                          </td>
+                          <td className="cs-num cs-table__r">
+                            {/* 공급보다 신청이 적으면 경쟁률이 아니라 미달이다 */}
+                            <span className="cs-gap" data-over={!nb.under}>
+                              {nb.under ? `미달 ${nb.rate} : 1` : `${nb.rate} : 1`}
+                            </span>
+                          </td>
+                          <td className="cs-num cs-table__r">
+                            {nb.supply.toLocaleString()}세대 · {nb.applied.toLocaleString()}건
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 

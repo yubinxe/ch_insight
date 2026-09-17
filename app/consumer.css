@@ -4991,3 +4991,10 @@ a.cs-pin:hover {
     font-size: 8.5px;
   }
 }
+
+/* 인근 단지 — 지역 평균 아래에 붙는 실제 사례 */
+.cs-near {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
