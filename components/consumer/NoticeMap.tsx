@@ -49,7 +49,17 @@ type NaverNS = any
 const KEY_ID = process.env.NEXT_PUBLIC_NAVER_MAP_KEY_ID ?? ''
 const SCRIPT_ID = 'naver-maps-v3'
 
-/** 스크립트는 한 번만 싣는다. 화면을 오가며 여러 장 붙으면 지도가 두 번 뜬다 */
+/**
+ * 지도 API 를 한 번만 싣는다.
+ *
+ * 네이버 로더는 `window.naver = { maps: null }` 을 **먼저** 만들고, 인증을
+ * 마친 뒤에야 `maps` 를 채운다. 그래서 `onload` 에서 `naver.maps` 를 한 번
+ * 보고 판단하면 거의 항상 비어 있는 것을 보게 된다 — 키가 멀쩡한데도
+ * "지도를 불러오지 못했습니다"로 끝나던 원인이 이것이었다.
+ *
+ * 문서가 정한 방법은 `callback` 파라미터다. 준비가 끝나면 로더가 그 함수를
+ * 부른다. 전역 이름은 한 번만 쓰고 지운다.
+ */
 function loadNaver(): Promise<NaverNS> {
   if (typeof window === 'undefined') return Promise.reject(new Error('브라우저 전용'))
   const w = window as unknown as { naver?: NaverNS; __naverMapPromise?: Promise<NaverNS> }
@@ -61,27 +71,50 @@ function loadNaver(): Promise<NaverNS> {
       reject(new Error('지도 키가 설정되지 않았습니다.'))
       return
     }
+
+    const cbName = `__zipcatchMapReady${Date.now()}`
+    const globals = window as unknown as Record<string, unknown>
+    let settled = false
+
+    const done = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      delete globals[cbName]
+      fn()
+    }
+
     // 인증이 막히면 스크립트는 정상 로드되고 이 전역만 불린다. 따로 잡아야
     // "지도가 흰 판으로 남는" 상태를 사용자에게 설명할 수 있다.
-    ;(window as unknown as Record<string, unknown>).navermap_authFailure = () =>
-      reject(new Error('지도 인증에 실패했습니다. 등록된 도메인인지 확인이 필요합니다.'))
+    globals.navermap_authFailure = () =>
+      done(() => reject(new Error('지도 인증에 실패했습니다. 등록된 서비스 URL 인지 확인이 필요합니다.')))
+
+    globals[cbName] = () => {
+      const n = (window as unknown as { naver?: NaverNS }).naver
+      done(() => {
+        if (n?.maps) resolve(n)
+        else reject(new Error('지도를 불러오지 못했습니다.'))
+      })
+    }
 
     const el = document.createElement('script')
     el.id = SCRIPT_ID
     el.async = true
     // 지오코더 서브모듈을 함께 부르지 않는다. 키에 Geocoding 이 열려 있지
-    // 않으면 그 요청이 401 을 받고, 그 여파로 `naver.maps` 자체가 세워지지
-    // 않아 지도 전체가 죽는다. 쓰지도 않는 것을 불러 화면을 잃을 이유가 없다.
-    // 콘솔에서 Geocoding 을 켠 뒤 `&submodules=geocoder` 를 되살리면 된다.
-    el.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${KEY_ID}`
-    el.onload = () => {
-      const n = (window as unknown as { naver?: NaverNS }).naver
-      if (n?.maps) resolve(n)
-      else reject(new Error('지도를 불러오지 못했습니다.'))
-    }
-    el.onerror = () => reject(new Error('지도를 불러오지 못했습니다.'))
+    // 않으면 그 요청이 401 을 받고, 그 여파로 `naver.maps` 가 세워지지 않아
+    // 지도 전체가 죽는다. 콘솔에서 Geocoding 을 켠 뒤 되살리면 된다.
+    el.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${KEY_ID}&callback=${cbName}`
+    el.onerror = () => done(() => reject(new Error('지도를 불러오지 못했습니다.')))
     document.head.appendChild(el)
+
+    // 콜백도 인증 실패도 오지 않는 경우가 있다(네트워크 차단 등).
+    // 영원히 기다리면 화면은 회색 판으로 남는다.
+    setTimeout(() => done(() => reject(new Error('지도를 불러오는 데 너무 오래 걸립니다.'))), 15000)
+  }).catch(err => {
+    // 실패한 약속을 캐시에 남기면 다시 들어와도 영영 지도가 없다.
+    delete (window as unknown as { __naverMapPromise?: unknown }).__naverMapPromise
+    throw err
   })
+
   return w.__naverMapPromise
 }
 
