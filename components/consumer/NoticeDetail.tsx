@@ -197,7 +197,9 @@ export default function NoticeDetail({ id }: { id: string }) {
                   <tr key={m.name}>
                     <td className="cs-table__key">{m.name}</td>
                     <td className="cs-num">
-                      {m.supplyArea === null ? '—' : `${m.supplyArea}㎡`}
+                      {/* 원자료는 83.978 처럼 소수가 길다. 그대로 적으면 정밀해
+                          보이지만 읽히지 않는다 — 한 자리로 줄인다 */}
+                      {m.supplyArea === null ? '—' : `${m.supplyArea.toFixed(1)}㎡`}
                       {m.exclusiveArea !== null && (
                         <span className="cs-table__sub">전용 {m.exclusiveArea}㎡</span>
                       )}
