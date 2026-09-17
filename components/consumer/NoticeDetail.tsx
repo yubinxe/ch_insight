@@ -19,12 +19,24 @@ interface SupplyModel {
   perPyeong: number | null
 }
 
+interface TradeStat {
+  sameDong: { count: number; medianPerPyeong: number | null }
+  sameSigungu: { count: number; medianPerPyeong: number | null }
+  monthly: { month: string; medianPerPyeong: number; count: number }[]
+  months: number
+  ok: boolean
+  reason: string | null
+  dong: string | null
+  sigungu: string | null
+}
+
 interface DetailResponse {
   property: Property
   urgency: UrgencyInfo
   candidate: Candidate | null
   schedule: Task[]
   supplyModels?: SupplyModel[]
+  trade?: TradeStat | null
 }
 
 export default function NoticeDetail({ id }: { id: string }) {
@@ -80,6 +92,24 @@ export default function NoticeDetail({ id }: { id: string }) {
 
   const { property, urgency, candidate, schedule } = data
   const supplyModels = data.supplyModels ?? []
+  const trade = data.trade ?? null
+
+  /**
+   * 견줌자 — 주변 전용 평당가 중앙값.
+   *
+   * 같은 동에 표본이 얇으면 시군구로 물러선다. 표본이 몇 건인지 함께 적어야
+   * 읽는 사람이 이 숫자를 얼마나 믿을지 스스로 정할 수 있다.
+   */
+  const bench = (() => {
+    if (!trade) return null
+    if (trade.sameDong.medianPerPyeong !== null && trade.sameDong.count >= 3) {
+      return { per: trade.sameDong.medianPerPyeong, count: trade.sameDong.count, scope: trade.dong ?? '같은 동' }
+    }
+    if (trade.sameSigungu.medianPerPyeong !== null && trade.sameSigungu.count >= 3) {
+      return { per: trade.sameSigungu.medianPerPyeong, count: trade.sameSigungu.count, scope: trade.sigungu ?? '같은 시군구' }
+    }
+    return null
+  })()
 
   /**
    * 주택형 표에서 뽑은 요약.
@@ -254,6 +284,100 @@ export default function NoticeDetail({ id }: { id: string }) {
             <p className="cs-note" style={{ marginTop: 14 }}>
               분양가는 주택형별 최고가 기준이고, 평당은 공급면적으로 나눈 값입니다. 층·동별 금액과
               옵션은 공고문에서 확인해 주세요.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* 주변 실거래 — 분양가가 싼지 비싼지는 그 숫자만 봐서는 알 수 없다 */}
+      {bench && (
+        <section style={{ marginTop: 32 }}>
+          <h2 className="cs-section-title" style={{ fontSize: 24 }}>
+            주변 아파트 매매 실거래
+          </h2>
+          <div className="cs-card" style={{ marginTop: 18 }}>
+            <p className="cs-pro__p" style={{ marginBottom: 18 }}>
+              <strong>{bench.scope}</strong> 최근 {trade!.months}개월 <strong>{bench.count}건</strong>의 전용 평당
+              중앙값은 <strong>{bench.per.toLocaleString()}만원</strong>입니다.
+            </p>
+
+            {supplyModels.length > 0 && (
+              <div className="cs-models">
+                <table className="cs-table">
+                  <thead>
+                    <tr>
+                      <th>주택형</th>
+                      <th className="cs-table__r">분양가</th>
+                      <th className="cs-table__r">주변 시세 환산액</th>
+                      <th className="cs-table__r">차이</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {supplyModels.map(m => {
+                      if (m.exclusiveArea === null || m.topAmount === null) return null
+                      const around = Math.round(bench.per * (m.exclusiveArea / 3.3058))
+                      const gap = m.topAmount - around
+                      return (
+                        <tr key={m.name}>
+                          <td className="cs-table__key">
+                            {m.name}
+                            <span className="cs-table__sub">전용 {m.exclusiveArea}㎡</span>
+                          </td>
+                          <td className="cs-num cs-table__r">{formatMan(m.topAmount)}</td>
+                          <td className="cs-num cs-table__r">{formatMan(around)}</td>
+                          <td className="cs-num cs-table__r">
+                            <span className="cs-gap" data-over={gap > 0}>
+                              {gap > 0 ? '+' : gap < 0 ? '−' : ''}
+                              {formatMan(Math.abs(gap))}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {trade!.monthly.length >= 3 && (
+              <div className="cs-trend">
+                <div className="cs-trend__head">
+                  <span className="cs-note">전용 평당 중앙값 {trade!.months}개월</span>
+                  <span className="cs-num cs-trend__delta" data-up={
+                    trade!.monthly[trade!.monthly.length - 1].medianPerPyeong >= trade!.monthly[0].medianPerPyeong
+                  }>
+                    {trade!.monthly[0].month.replace('-', '.')} {trade!.monthly[0].medianPerPyeong.toLocaleString()}만
+                    {' → '}
+                    {trade!.monthly[trade!.monthly.length - 1].month.replace('-', '.')}{' '}
+                    {trade!.monthly[trade!.monthly.length - 1].medianPerPyeong.toLocaleString()}만
+                  </span>
+                </div>
+                {(() => {
+                  const ms = trade!.monthly
+                  const lo = Math.min(...ms.map(m => m.medianPerPyeong))
+                  const hi = Math.max(...ms.map(m => m.medianPerPyeong))
+                  const span = hi - lo || 1
+                  return (
+                    <div className="cs-trend__bars">
+                      {ms.map(m => (
+                        <div key={m.month} className="cs-trend__col" title={`${m.month} · ${m.medianPerPyeong.toLocaleString()}만원 · ${m.count}건`}>
+                          <div
+                            className="cs-trend__bar"
+                            style={{ height: `${18 + ((m.medianPerPyeong - lo) / span) * 82}%` }}
+                          />
+                          <span className="cs-trend__m">{m.month.slice(5)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
+            <p className="cs-note" style={{ marginTop: 16 }}>
+              환산액 = 주변 전용 평당 중앙값 × 이 주택형의 전용 평수. 해제된 거래는 뺐고, 거래가
+              3건 미만인 달은 비웠습니다. 주변 단지의 연식·규모·브랜드 차이는 반영하지 않은 단순
+              비교이므로, 차액이 곧 이익이나 손해를 뜻하지 않습니다. 출처: 국토교통부 실거래가.
             </p>
           </div>
         </section>

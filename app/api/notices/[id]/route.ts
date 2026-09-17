@@ -1,6 +1,8 @@
 import { propertyById } from '@/lib/crm/store'
 import { findOfficialProperty } from '@/lib/consumer/official'
 import { fetchSupplyModels } from '@/lib/adapters/applyhome-models'
+import { fetchTradeStat } from '@/lib/adapters/molit-trade'
+import { geocode, isGeocodingConfigured } from '@/lib/consumer/geocode'
 import { checkUrgency, buildCandidate } from '@/lib/crm/services/scoring'
 import { buildTasks } from '@/lib/crm/services/scheduling'
 import { resolveSession } from '@/lib/consumer/session'
@@ -49,6 +51,20 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         ? await fetchSupplyModels(property.announcementId)
         : { models: [], ok: true, reason: null }
 
+    /**
+     * 주변 실거래.
+     *
+     * 국토부는 시군구 코드로만 물을 수 있다. 주소를 지오코딩할 때 카카오가
+     * 법정동코드를 함께 주므로 그것을 쓴다 — 주소를 두 번 묻지 않는다.
+     */
+    const where =
+      property.dataOrigin === 'OFFICIAL' && isGeocodingConfigured()
+        ? await geocode(property.address).catch(() => null)
+        : null
+    const trade = where?.bCode
+      ? await fetchTradeStat(where.bCode, where.dong)
+      : null
+
     track(session, 'notice_viewed', { propertyId: property.id })
 
     return Response.json({
@@ -59,6 +75,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       budget: candidate?.budget ?? null,
       dataOrigin: property.dataOrigin,
       supplyModels: supply.models,
+      trade: trade
+        ? {
+            ...trade,
+            dong: where?.dong ?? null,
+            sigungu: where?.sigungu ?? null,
+          }
+        : null,
     })
   } catch (err) {
     return Response.json(

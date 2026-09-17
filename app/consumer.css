@@ -4690,3 +4690,79 @@ a.cs-pin:hover {
     font-size: 27px;
   }
 }
+
+/* ═════════════════════════════════════════════════════════
+   주변 실거래 비교
+
+   분양가가 견줌자보다 높은 것은 흔한 일이다(새 아파트니까). 그래서 차액에
+   빨강·초록을 칠하지 않는다 — 손익으로 읽히기 때문이다. 방향만 표시한다.
+   ═════════════════════════════════════════════════════════ */
+.cs-gap {
+  font-weight: 700;
+  color: var(--title);
+}
+.cs-gap[data-over='true'] {
+  color: var(--cal-sale);
+}
+.cs-gap[data-over='false'] {
+  color: var(--cal-rent);
+}
+
+.cs-trend {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.cs-trend__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.cs-trend__delta {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--body);
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-trend__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 116px;
+}
+.cs-trend__col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  gap: 6px;
+}
+/* 막대는 옅게. 이 그림은 수치를 읽는 곳이 아니라 방향을 보는 곳이다 */
+.cs-trend__bar {
+  width: 100%;
+  max-width: 34px;
+  background: var(--cal-sale-soft);
+  border-top: 2px solid var(--cal-sale);
+  border-radius: 3px 3px 0 0;
+}
+.cs-trend__m {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 620px) {
+  .cs-trend__bars {
+    height: 92px;
+  }
+  .cs-trend__m {
+    font-size: 10px;
+  }
+}
