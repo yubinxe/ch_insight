@@ -69,6 +69,14 @@ export default function NoticeDetail({ id }: { id: string }) {
   }
 
   const { property, urgency, candidate, schedule } = data
+  /**
+   * 예시 공고인가.
+   *
+   * 화면이 이 값을 읽지 않고 늘 '예시 데이터' 를 찍고 있었다. 청약홈에서
+   * 받아온 진짜 공고에도 붙어, 가장 믿어야 할 자리에서 서비스가 스스로를
+   * 의심하게 만들었다.
+   */
+  const isSample = property.dataOrigin !== 'OFFICIAL'
   const badge = statusBadge(urgency)
   const closed = urgency.level === 'CLOSED'
   const hasDeadlineAlert = alerts.some(a => a.scope === 'DEADLINE' && a.propertyId === property.id)
@@ -85,7 +93,14 @@ export default function NoticeDetail({ id }: { id: string }) {
       <div className="cs-badge-row" style={{ marginBottom: 14 }}>
         <span className="cs-badge cs-badge--brand">{property.housingType}</span>
         <span className={`cs-badge ${badge.cls}`}>{badge.text}</span>
-        <span className="cs-sample">예시 데이터</span>
+        {/* 예시일 때만 예시라고 적는다. 예전에는 조건 없이 늘 찍혀서, 청약홈에서
+            받아온 진짜 공고에도 '예시 데이터' 가 붙어 있었다. 데이터를 의심하게
+            만드는 표시는 틀렸을 때 가장 비싸다. */}
+        {isSample ? (
+          <span className="cs-sample">예시 데이터</span>
+        ) : (
+          <span className="cs-badge">{property.source}</span>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -181,7 +196,7 @@ export default function NoticeDetail({ id }: { id: string }) {
       {/* 공식 일정 */}
       <section style={{ marginTop: 32 }}>
         <h2 className="cs-section-title" style={{ fontSize: 24 }}>
-          공고 일정 · 예시 데이터
+          공고 일정{isSample && ' · 예시 데이터'}
         </h2>
         <div className="cs-card" style={{ marginTop: 18 }}>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 2 }}>
@@ -204,7 +219,8 @@ export default function NoticeDetail({ id }: { id: string }) {
             ))}
           </ul>
           <p className="cs-note" style={{ marginTop: 16 }}>
-            시간대: 한국 표준시(Asia/Seoul). 예시 일정이며, 공개되지 않은 날짜는 &lsquo;공고 미공개&rsquo;로 표시합니다.
+            시간대: 한국 표준시(Asia/Seoul).{isSample ? ' 예시 일정이며,' : ' 공고문에 적힌 날짜만 싣고,'}{' '}
+            공개되지 않은 날짜는 &lsquo;공고 미공개&rsquo;로 표시합니다.
           </p>
         </div>
       </section>
@@ -262,8 +278,9 @@ export default function NoticeDetail({ id }: { id: string }) {
             </a>
           ) : (
             <p className="cs-sub" style={{ fontSize: 16 }}>
-              이 공고는 예시 데이터라 연결할 원문이 없습니다. 실제 공고 연동 시 원문 링크를 함께
-              제공합니다.
+              {isSample
+                ? '이 공고는 예시 데이터라 연결할 원문이 없습니다. 실제 공고 연동 시 원문 링크를 함께 제공합니다.'
+                : '이 공고는 원문 링크가 공개되지 않았습니다. 공급기관 누리집에서 공고번호로 찾아 주세요.'}
             </p>
           )}
           <p className="cs-note" style={{ marginTop: 12 }}>
