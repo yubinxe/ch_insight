@@ -3019,6 +3019,11 @@ body:has(.cs-ticker) .cs-chat {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
+/* 0건은 흐리게 — 있다는 사실은 알리되 눈을 끌지는 않는다 */
+.cs-pill__n[data-zero='true'] {
+  opacity: 0.45;
+}
+
 .cs-pill[data-on='true'] .cs-pill__n {
   color: color-mix(in srgb, var(--paper) 68%, transparent);
 }

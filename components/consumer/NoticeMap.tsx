@@ -128,6 +128,13 @@ function priceLine(p: Pin) {
   return `${dep} · 월 ${p.monthlyRent.toLocaleString()}만원`
 }
 
+/** 범위가 가리키는 지역 — '서울'을 눌렀는데 부산 공고가 보이면 범위가 거짓말이 된다 */
+const SCOPE_PROVINCES: Record<MapScope, string[] | null> = {
+  서울: ['서울'],
+  수도권: ['서울', '경기', '인천'],
+  전국: null,
+}
+
 /**
  * 카카오의 level 은 작을수록 확대이고, 한 단 오를 때마다 대략 두 배씩 넓어진다.
  * 7 은 가로 1km 남짓 — 서울 도심 몇 블록이다. 처음에 이 값을 "서울"로 잡았더니
@@ -143,9 +150,17 @@ const LEVEL: Record<MapScope, number> = { 서울: 9, 수도권: 11, 전국: 13 }
 export default function NoticeMap() {
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoNS>(null)
+  /** 마지막으로 화면을 맞춘 범위. 같은 범위로 두 번 움직이지 않으려고 둔다 */
+  const framedRef = useRef<MapScope | null>(null)
   const overlaysRef = useRef<KakaoNS[]>([])
 
-  const [scope, setScope] = useState<MapScope>('서울')
+  /**
+   * 기본 범위.
+   *
+   * '서울'로 두었더니 빈 지도가 열렸다 — 지금 접수 중인 서울 공식 공고가 0건이다.
+   * 처음 본 화면이 비어 있으면 서비스에 공고가 없다고 읽힌다. 공고가 있는 데서 연다.
+   */
+  const [scope, setScope] = useState<MapScope>('수도권')
   const [data, setData] = useState<MapData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
@@ -170,17 +185,59 @@ export default function NoticeMap() {
     }
   }, [])
 
-  // 지도를 세운다. 데이터가 오기 전에 먼저 띄워 빈 판이 깜빡이지 않게 한다.
+  /** 고른 범위의 공고 수 — 비어 있을 때 이유를 말하는 데 쓴다 */
+  const scopeCount = data
+    ? (SCOPE_PROVINCES[scope]
+        ? data.pins.filter(p => SCOPE_PROVINCES[scope]!.includes(p.province))
+        : data.pins
+      ).length
+    : 0
+
+  /** 그 범위에 실제로 있는 공고 */
+  const pinsInScope = (pins: Pin[]) => {
+    const allow = SCOPE_PROVINCES[scope]
+    return allow ? pins.filter(p => allow.includes(p.province)) : pins
+  }
+
+  /** 주어진 공고를 한 화면에 담는다. 담을 게 없으면 범위의 기본 자리로 */
+  const frame = (kakao: KakaoNS, map: KakaoNS, pins: Pin[], animate: boolean) => {
+    const s = MAP_SCOPE[scope]
+    if (pins.length === 0) {
+      const c = new kakao.maps.LatLng(s.center.lat, s.center.lng)
+      map.setLevel(LEVEL[scope])
+      if (animate) map.panTo(c)
+      else map.setCenter(c)
+      return
+    }
+    const box = new kakao.maps.LatLngBounds()
+    pins.forEach(p => box.extend(new kakao.maps.LatLng(p.lat, p.lng)))
+    map.setBounds(box, 32, 32, 32, 32)
+  }
+
+  /**
+   * 지도를 세운다 — **공고가 도착한 뒤에.**
+   *
+   * 예전에는 서울로 먼저 띄우고 400ms 뒤 공고가 있는 데로 옮겼다. 화면이 한 번
+   * 잡혔다가 곧바로 튀어 눈이 끊겼다. 사용자는 자기가 만지지도 않았는데 지도가
+   * 움직이면 그것을 오작동으로 읽는다.
+   *
+   * 지도는 한 번만 그린다. 그릴 때 이미 맞는 자리에 있으면 옮길 일이 없다.
+   */
   useEffect(() => {
     let alive = true
+    if (!data) return
     loadKakao()
       .then(kakao => {
         if (!alive || !host.current || mapRef.current) return
-        const s = MAP_SCOPE.서울
-        mapRef.current = new kakao.maps.Map(host.current, {
+        const s = MAP_SCOPE[scope]
+        const map = new kakao.maps.Map(host.current, {
           center: new kakao.maps.LatLng(s.center.lat, s.center.lng),
-          level: LEVEL.서울,
+          level: LEVEL[scope],
         })
+        mapRef.current = map
+        // 첫 화면을 여기서 정한다. 그린 뒤에는 옮기지 않는다.
+        frame(kakao, map, pinsInScope(data.pins), false)
+        framedRef.current = scope
         setReady(true)
       })
       .catch((e: Error) => {
@@ -189,15 +246,22 @@ export default function NoticeMap() {
     return () => {
       alive = false
     }
-  }, [])
+    // scope 는 아래 효과가 맡는다 — 지도를 다시 만들지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
 
-  // 범위를 누르면 옮긴다. 다시 만들지 않는다 — 다시 만들면 눈이 끊긴다.
+  /**
+   * 범위를 누르면 옮긴다. 이건 사용자가 시킨 움직임이라 부드럽게 따라가도 된다.
+   * 첫 그림이 이미 자리를 잡았으므로 지도가 저절로 움직이는 곳은 여기뿐이다.
+   */
   useEffect(() => {
     const w = window as unknown as { kakao?: KakaoNS }
-    if (!ready || !mapRef.current || !w.kakao?.maps) return
-    const s = MAP_SCOPE[scope]
-    mapRef.current.setLevel(LEVEL[scope])
-    mapRef.current.panTo(new w.kakao.maps.LatLng(s.center.lat, s.center.lng))
+    if (!ready || !mapRef.current || !data || !w.kakao?.maps) return
+    // 첫 그림이 이미 이 범위로 잡혀 있으면 아무것도 하지 않는다
+    if (framedRef.current === scope) return
+    frame(w.kakao, mapRef.current, pinsInScope(data.pins), true)
+    framedRef.current = scope
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, ready])
 
   // 표시를 그린다. 기본 핀 대신 지면의 글자꼴로 만든 표를 얹는다.
@@ -271,53 +335,10 @@ export default function NoticeMap() {
       inView.sort((a, z) => (a.daysLeft ?? 9999) - (z.daysLeft ?? 9999))
       setVisible(inView)
     }
-    /**
-     * 화면에 표시가 하나도 없으면 공고가 있는 데로 맞춘다.
-     *
-     * 빈 지도를 보여주는 것은 지도가 없는 것보다 나쁘다 — 공고가 없다고 읽히기
-     * 때문이다. 축척을 아무리 잘 잡아도 데이터가 어디에 몰릴지는 그때그때 다르다.
-     * 처음 한 번만 맞추고, 그 뒤 사용자가 움직인 화면은 건드리지 않는다.
-     */
-    let fitted = false
-    const fitIfEmpty = () => {
-      if (fitted) return
-      const b = map.getBounds()
-      if (!b) return
-      const sw = b.getSouthWest()
-      const ne = b.getNorthEast()
-      const anyInView = data.pins.some(
-        p =>
-          p.lat >= sw.getLat() &&
-          p.lat <= ne.getLat() &&
-          p.lng >= sw.getLng() &&
-          p.lng <= ne.getLng(),
-      )
-      if (anyInView || data.pins.length === 0) return
-      fitted = true
-      try {
-        // 전부를 담으면 제주까지 들어와 수도권이 좁쌀이 된다. 지금 고른 범위
-        // 안의 공고에만 맞추고, 그것도 없으면 그때 전체로 물러선다.
-        const s = MAP_SCOPE[scope]
-        const near = data.pins
-          .map(p => ({ p, d: Math.hypot(p.lat - s.center.lat, p.lng - s.center.lng) }))
-          .sort((a, b) => a.d - b.d)
-          .slice(0, Math.max(8, Math.round(data.pins.length * 0.35)))
-          .map(x => x.p)
-        const target = near.length ? near : data.pins
-        const box = new kakao.maps.LatLngBounds()
-        target.forEach(p => box.extend(new kakao.maps.LatLng(p.lat, p.lng)))
-        map.setBounds(box, 28, 28, 28, 28)
-      } catch {
-        /* 못 맞춰도 지도는 그대로 쓸 수 있다 */
-      }
-    }
-
     sync()
-    // 지도가 자리를 잡기 전에 한 번 더 — 처음 그릴 때 bounds 가 아직 0 인 순간이 있다
-    const settle = setTimeout(() => {
-      fitIfEmpty()
-      sync()
-    }, 400)
+    // 처음 그릴 때 bounds 가 아직 0 인 순간이 있어 한 박자 뒤 다시 센다.
+    // 화면은 건드리지 않고 옆 목록만 맞춘다 — 저절로 움직이는 지도를 만들지 않는다.
+    const settle = setTimeout(sync, 300)
     kakao.maps.event.addListener(map, 'idle', sync)
 
     return () => {
@@ -344,8 +365,8 @@ export default function NoticeMap() {
       <header>
         <h2 className="cs-section-title">지도로 보는 공고</h2>
         <p className="cs-sub" style={{ marginTop: 12, marginBottom: 22 }}>
-          서울부터 보여 드려요. 표시의 숫자는 접수 마감까지 남은 날입니다. 지도를 움직이면 옆 목록이
-          보이는 범위의 공고로 바뀝니다.
+          공고가 있는 곳부터 보여 드려요. 표시의 숫자는 접수 마감까지 남은 날이고, 붉은 쪽이 분양,
+          푸른 쪽이 임대입니다. 지도를 움직이면 옆 목록이 보이는 범위의 공고로 바뀝니다.
         </p>
       </header>
 
@@ -354,7 +375,16 @@ export default function NoticeMap() {
           label="범위"
           value={scope}
           onChange={v => setScope(v as MapScope)}
-          items={(Object.keys(MAP_SCOPE) as MapScope[]).map(k => ({ value: k, label: k }))}
+          items={(Object.keys(MAP_SCOPE) as MapScope[]).map(k => {
+            const allow = SCOPE_PROVINCES[k]
+            const n = data
+              ? allow
+                ? data.pins.filter(p => allow.includes(p.province)).length
+                : data.pins.length
+              : undefined
+            // 건수를 함께 적어 어디에 공고가 몰려 있는지 누르기 전에 보이게 한다
+            return { value: k, label: k, count: n }
+          })}
         />
         <div className="cs-map__legend" aria-hidden="true">
           <span className="cs-map__key">
@@ -392,7 +422,9 @@ export default function NoticeMap() {
             <p className="cs-note" style={{ padding: '18px 16px' }}>
               {error
                 ? '지도를 열지 못해 범위를 셀 수 없어요.'
-                : '이 범위에는 표시된 공고가 없어요. 지도를 넓히거나 범위를 바꿔 보세요.'}
+                : scopeCount === 0
+                  ? `지금 ${scope}에는 접수 중인 공고가 없어요. 다른 범위를 눌러 보세요.`
+                  : '이 범위에는 표시된 공고가 없어요. 지도를 넓히거나 범위를 바꿔 보세요.'}
             </p>
           ) : (
             <ul className="cs-map__list">

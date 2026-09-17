@@ -71,8 +71,11 @@ export function PillChoice({
               onClick={() => onChange(it.value)}
             >
               {it.label}
-              {typeof it.count === 'number' && it.count > 0 && (
-                <span className="cs-pill__n">{it.count}</span>
+              {typeof it.count === 'number' && (
+                // 0도 적는다. 0을 숨기면 "아직 안 세어봤다"와 구별되지 않는다
+                <span className="cs-pill__n" data-zero={it.count === 0}>
+                  {it.count}
+                </span>
               )}
             </button>
           )
