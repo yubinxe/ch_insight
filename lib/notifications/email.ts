@@ -14,6 +14,23 @@ function fromAddress() {
   return (process.env.NOTIFICATION_FROM ?? '집캐치 <onboarding@resend.dev>').trim()
 }
 
+/**
+ * 배달될 수 없는 주소.
+ *
+ * 시연용 시드 고객은 전부 `@example.com` 이고 알림 수신 동의까지 켜져 있다.
+ * 발송 키가 들어온 순간 정기 루틴이 이 주소들로 매일 수백 번 발송을 시도하는데,
+ * 전부 거절당하면서 발송 계정의 평판만 깎는다. 보내기 전에 걸러낸다.
+ *
+ * RFC 2606·6761 이 문서·테스트용으로 예약해 둔 도메인만 넣는다.
+ * 진짜 주소를 실수로 막지 않으려면 목록은 좁아야 한다.
+ */
+const UNDELIVERABLE =
+  /@(?:example\.(?:com|org|net)|localhost)$|@[^@]*\.(?:test|example|invalid|localhost|local)$/i
+
+export function isUndeliverable(address: string) {
+  return UNDELIVERABLE.test(address.trim())
+}
+
 /** 알림 본문(평문)을 이메일 HTML 로 감싼다 */
 export function renderEmailHtml(payload: NotificationPayload): string {
   const escape = (s: string) =>
@@ -69,6 +86,12 @@ export const emailProvider: NotificationProvider = {
     }
     if (!payload.to) {
       return { status: 'PREVIEW', detail: '고객 이메일 주소가 없어 발송하지 않고 원문만 보관했습니다.' }
+    }
+    if (isUndeliverable(payload.to)) {
+      return {
+        status: 'PREVIEW',
+        detail: '배달할 수 없는 예약 도메인(시연용 주소)이라 발송하지 않고 원문만 보관했습니다.',
+      }
     }
 
     try {
