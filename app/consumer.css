@@ -2811,3 +2811,25 @@ body:has(.cs-ticker) .cs-chat {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+   출처 배지 — 실제 공고와 예시를 눈으로 가른다
+   점선 회색 배지는 '보조 정보'로 읽혀 그냥 지나친다. 예시는 지면에서
+   가장 눈에 띄는 경고색(주묵 계열)으로 바꾸고, 실제 공고는 먹으로 채워
+   둘이 같은 무게로 보이지 않게 한다. 예시가 새어 나가면 바로 보여야 한다.
+   ───────────────────────────────────────────────────────── */
+.cs-sample {
+  padding: 5px 10px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+.cs-official {
+  padding: 5px 10px;
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--paper);
+}

@@ -7,11 +7,15 @@ import { track } from '@/lib/consumer/store'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await ctx.params
-    // 예시 공고 → 실제 공고 순으로 찾는다. 둘의 id 는 겹치지 않는다.
-    const property = propertyById(id) ?? (await findOfficialProperty(id))
+    // 실제 공고만 연다. 예시를 먼저 찾던 예전 순서는, 목록에서 예시를 걷어낸
+    // 뒤에도 주소창과 저장 목록으로 예시 상세가 열리게 두고 있었다.
+    // 상세는 '예시' 배지 하나에 모든 구분을 걸어두기에 너무 깊은 자리다.
+    const includeSample = new URL(req.url).searchParams.get('includeSample') === '1'
+    const property =
+      (await findOfficialProperty(id)) ?? (includeSample ? propertyById(id) : null)
     if (!property) {
       return Response.json({ error: '공고를 찾을 수 없습니다.' }, { status: 404 })
     }

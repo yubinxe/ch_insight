@@ -23,12 +23,23 @@ const HOUSING_DIST: { value: HousingType; weight: number }[] = [
 ]
 
 /** 공급기관은 주택유형과 무관하게 섞이지 않는다 */
+/**
+ * 예시 공고의 출처 표기.
+ *
+ * 예전에는 'LH 청년매입임대' 처럼 실제 기관명을 적었다. 화면의 '예시' 배지를
+ * 놓친 사람에게는 출처와 공고번호가 진짜라고 말하는 셈이라, 배지 하나에
+ * 모든 구분을 걸어둔 상태였다. 데이터 자체가 시연용이라고 말하게 한다 —
+ * 어디로 새어 나가든 그 자리에서 드러난다.
+ */
+const DEMO_SOURCE = '집캐치 예시 데이터 (시연용 · 실제 공고 아님)'
+
+/** 유형별 표기는 남겨둔다. 시연 화면에서 유형을 구분해 읽기 위한 것뿐이다 */
 const SOURCE_BY_TYPE: Record<HousingType, string[]> = {
-  청년매입임대: ['LH 청년매입임대', 'SH 서울주택도시공사'],
-  행복주택: ['LH 행복주택', 'SH 서울주택도시공사'],
-  공공임대: ['LH 한국토지주택공사', 'SH 서울주택도시공사'],
-  공공지원민간임대: ['HUG 공공지원민간임대', '민간임대 사업자'],
-  신혼희망타운: ['LH 신혼희망타운'],
+  청년매입임대: [DEMO_SOURCE],
+  행복주택: [DEMO_SOURCE],
+  공공임대: [DEMO_SOURCE],
+  공공지원민간임대: [DEMO_SOURCE],
+  신혼희망타운: [DEMO_SOURCE],
 }
 
 const NAME_HEAD = [
@@ -111,8 +122,10 @@ export function generateProperties(count = 50, seed = 990911, now = new Date()):
 
     out.push({
       id,
-      source: hero ? 'LH 청년매입임대' : rng.pick(SOURCE_BY_TYPE[housingType]),
-      announcementId: `2026${String(rng.int(1, 9))}${String(idx).padStart(4, '0')}`,
+      source: hero ? DEMO_SOURCE : rng.pick(SOURCE_BY_TYPE[housingType]),
+      // 공고번호도 진짜 형식을 흉내 내지 않는다. 'DEMO-' 접두사가 붙으면
+      // 검색창에 넣어보는 사람도 바로 안다.
+      announcementId: `DEMO-${String(idx).padStart(4, '0')}`,
       name: hero ? '동작 청년 매입임대 (노량진)' : `${rng.pick(NAME_HEAD)}${rng.pick(NAME_TAIL)} ${region} ${idx}차`,
       housingType,
       region,

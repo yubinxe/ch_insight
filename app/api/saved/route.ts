@@ -2,7 +2,7 @@ import { checkMutation } from '@/lib/consumer/security'
 import { NextRequest } from 'next/server'
 import { resolveSession } from '@/lib/consumer/session'
 import { listSaved, saveNotice, track, unsaveNotice } from '@/lib/consumer/store'
-import { propertyById } from '@/lib/crm/store'
+import { findOfficialProperty } from '@/lib/consumer/official'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
   try {
     const session = await resolveSession()
     const { propertyId } = (await req.json()) ?? {}
-    if (typeof propertyId !== 'string' || !propertyById(propertyId)) {
+    // 실제 공고만 저장한다. 예시를 담아두면 관심공고 목록에서 되살아난다.
+    if (typeof propertyId !== 'string' || !(await findOfficialProperty(propertyId))) {
       return Response.json({ error: '공고를 찾을 수 없습니다.' }, { status: 404 })
     }
     saveNotice(session, propertyId)

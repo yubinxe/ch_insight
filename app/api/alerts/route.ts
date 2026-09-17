@@ -2,7 +2,7 @@ import { checkMutation } from '@/lib/consumer/security'
 import { NextRequest } from 'next/server'
 import { resolveSession } from '@/lib/consumer/session'
 import { getUser, listAlerts, subscribeAlert, track, unsubscribeAlert } from '@/lib/consumer/store'
-import { propertyById } from '@/lib/crm/store'
+import { findOfficialProperty } from '@/lib/consumer/official'
 import * as repo from '@/lib/db/repo'
 import { sendConditionDigest } from '@/lib/services/digest'
 import { baseUrl } from '@/lib/services/pipeline'
@@ -57,7 +57,10 @@ export async function POST(req: NextRequest) {
     if (consent !== true) {
       return Response.json({ error: '알림 수신 동의가 필요합니다.' }, { status: 400 })
     }
-    if (scope === 'DEADLINE' && (typeof propertyId !== 'string' || !propertyById(propertyId))) {
+    if (
+      scope === 'DEADLINE' &&
+      (typeof propertyId !== 'string' || !(await findOfficialProperty(propertyId)))
+    ) {
       return Response.json({ error: '공고를 찾을 수 없습니다.' }, { status: 404 })
     }
     if (scope === 'NEW_NOTICE' && !session.profile) {

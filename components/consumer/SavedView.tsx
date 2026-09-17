@@ -121,8 +121,17 @@ export default function SavedView() {
 
       <section style={{ marginTop: 40 }}>
         <h2 className="cs-section-title" style={{ fontSize: 22 }}>
-          저장한 공고 {savedIds.length}건
+          저장한 공고 {rows.length}건
         </h2>
+
+        {/* 예시 공고를 걷어내기 전에 저장해 둔 항목은 이제 열리지 않는다.
+            숫자만 줄어들면 사용자는 자기 기록이 사라졌다고 읽는다. */}
+        {!loading && !meLoading && savedIds.length > rows.length && (
+          <p className="cs-note" style={{ marginTop: 10 }}>
+            예전에 저장하신 {savedIds.length - rows.length}건은 화면 구성을 위한 예시 공고였습니다.
+            실제 공고만 다루도록 바뀌면서 목록에서 내렸습니다.
+          </p>
+        )}
 
         {meLoading || loading ? (
           <div className="cs-notice-grid" style={{ marginTop: 20 }}>
