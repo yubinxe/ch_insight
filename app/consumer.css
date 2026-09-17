@@ -3,7 +3,18 @@
    제목 Gmarket Sans / 본문·입력·버튼 Pretendard
    ============================================================ */
 
-.cs {
+/* 마감 티커의 높이. 챗봇 버튼·패널은 `.cs` 바깥에 붙으므로
+   이 값만 문서 뿌리에 둔다 — 서로 비켜설 거리를 공유해야 한다. */
+:root {
+  --ticker-h: 56px;
+}
+
+/* 지면의 토큰. 챗봇(`.cs-chat-fab` · `.cs-chat`)은 `.cs` 바깥에 떠 있어서
+   여기에 함께 적어주지 않으면 var() 가 풀리지 않는다 — 버튼 바탕이
+   사라지고 흰 아이콘만 남는다. */
+.cs,
+.cs-chat-fab,
+.cs-chat {
   --font-sans: var(--font-pretendard), Arial, system-ui, sans-serif;
   /* ── 색 ───────────────────────────────────────────────
      지면·글자·브랜드를 전부 파랑 한 축에 두면 기본값처럼 읽힌다.
@@ -57,7 +68,11 @@
   --r-btn: 12px;
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
 
+/* 지면의 배치. 토큰과 달리 이것은 `.cs` 만의 몫이다 —
+   챗봇까지 전체 높이를 갖게 하면 빈 지면이 하나 더 깔린다. */
+.cs {
   background: var(--paper);
   color: var(--body);
   min-height: 100vh;
@@ -1064,6 +1079,101 @@
   line-height: 1.6;
 }
 
+/* ── 공고 없음 — 예시만 남았을 때 ──────────────────────────
+   비어 있다는 사실을 상자에 담아 띄우지 않는다. 경고처럼 보이는 순간
+   사용자는 자기가 뭔가 잘못했다고 읽는다. 괘선 하나만 세워 목록의
+   머리말로 놓고, 주묵은 '0건'에만 한 번 찍는다. */
+.cs-vacancy {
+  border-top: 2px solid var(--line-ink);
+  padding: 30px 0 32px;
+}
+.cs-vacancy__eyebrow {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.cs-vacancy__title {
+  margin: 0;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--title);
+}
+.cs-vacancy__desc {
+  margin: 12px 0 0;
+  max-width: 52ch;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.cs-vacancy__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* ── 참고 후보 — 조건을 벗어난 공고가 서는 층 ────────────────
+   조건에 맞는 후보와 나란히 두면 같은 자격으로 읽힌다. 지우는 대신
+   지면을 한 단 내린 판 위에 옮겨, 층이 다르다는 것을 배치로 말한다.
+   주묵은 쓰지 않는다 — 이 지면에서 붉은 것은 마감뿐이다. */
+.cs-nearby {
+  padding: clamp(28px, 4vw, 44px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--paper-2);
+}
+.cs-nearby__eyebrow {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.cs-nearby__title {
+  margin: 0;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: clamp(20px, 2.2vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--title);
+}
+.cs-nearby__desc {
+  margin: 12px 0 26px;
+  max-width: 56ch;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* 판이 이미 한 단 내려앉았으므로 카드는 흰 종이로 뜨지 않는다.
+   괘선만 남기고, 들어올리는 그림자와 호버 이동도 거둔다. */
+.cs-notice--nearby {
+  background: transparent;
+  border-color: var(--line-ink);
+  box-shadow: none;
+}
+.cs-notice--nearby:hover {
+  transform: none;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+/* 초과분은 제목보다 먼저 읽혀야 한다. 판단의 근거가 거기 있다. */
+.cs-notice__over {
+  margin: 4px 0 10px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--check);
+  font-variant-numeric: tabular-nums;
+}
+
 .cs-error {
   padding: 18px 20px;
   border-radius: var(--r-inner);
@@ -1650,13 +1760,22 @@
 }
 
 /* ── 마감 티커 — 이 서비스에서 가장 빨리 사라지는 정보 ──── */
+/* 지면 안을 흐르지 않고 화면 맨 아래에 붙는다. 마감은 스크롤 위치를
+   기다려 주지 않으므로, 어디를 보고 있든 발치에 깔아둔다.
+   챗봇은 이 높이만큼 비켜선다(아래 `body:has(.cs-ticker)` 규칙). */
 .cs-ticker {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 55;
+  height: var(--ticker-h);
   display: flex;
   align-items: stretch;
   gap: 0;
   border-top: 1px solid var(--line-ink);
-  border-bottom: 1px solid var(--line);
   background: var(--surface);
+  box-shadow: 0 -8px 24px -16px rgba(16, 24, 40, 0.45);
   overflow: hidden;
 }
 .cs-ticker__tag {
@@ -1686,6 +1805,8 @@
 .cs-ticker__view {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
   overflow: hidden;
   /* 양 끝을 흐려 잘린 느낌을 없앤다 */
   mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent);
@@ -1693,6 +1814,7 @@
 .cs-ticker__lane {
   display: flex;
   align-items: center;
+  height: 100%;
   gap: 0;
   width: max-content;
   animation: csTicker 42s linear infinite;
@@ -1705,11 +1827,13 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+/* 막대 높이가 고정되므로 칸도 높이를 꽉 채운다 — 괘선이 끝까지 내려간다 */
 .cs-ticker__item {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+  height: 100%;
   gap: 10px;
-  padding: 15px 22px;
+  padding: 0 22px;
   text-decoration: none;
   color: var(--body);
   border-right: 1px solid var(--line);
@@ -1753,8 +1877,38 @@
     padding: 0 12px;
     font-size: 14px;
   }
+  .cs-ticker__item {
+    padding: 0 16px;
+  }
   .cs-ticker__name {
     max-width: 22ch;
+  }
+}
+@media (max-width: 480px) {
+  :root {
+    --ticker-h: 48px;
+  }
+}
+
+/* 티커가 떠 있을 때만 발치를 비운다. 마감 14일 이내 공고가 세 건이
+   안 되면 티커 자체가 그려지지 않고, 그때는 아무것도 밀지 않는다.
+   챗봇은 `.cs` 바깥에 붙으므로 문서 뿌리에서 걸러낸다. */
+body:has(.cs-ticker) .cs-footer {
+  padding-bottom: calc(36px + var(--ticker-h));
+}
+body:has(.cs-ticker) .cs-chat-fab {
+  bottom: calc(var(--ticker-h) + 24px);
+}
+body:has(.cs-ticker) .cs-chat {
+  bottom: calc(var(--ticker-h) + 92px);
+  max-height: min(600px, calc(100vh - 140px - var(--ticker-h)));
+}
+@media (max-width: 480px) {
+  body:has(.cs-ticker) .cs-chat-fab {
+    bottom: calc(var(--ticker-h) + 16px);
+  }
+  body:has(.cs-ticker) .cs-chat {
+    bottom: calc(var(--ticker-h) + 84px);
   }
 }
 

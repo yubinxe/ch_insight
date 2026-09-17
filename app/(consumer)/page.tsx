@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: '알림은 어떤 내용이 오나요?',
-    a: '새 공고와 관심공고 마감 알림을 선택할 수 있어요. 지금은 선택한 범위와 동의 시각만 저장하며 이메일은 발송하지 않습니다. 관심공고에서 설정을 해제할 수 있어요.',
+    a: '새 공고와 관심공고 마감 알림을 선택할 수 있어요. 동의하시면 그 자리에서 조건에 맞는 공고를 한 통 보내드리고, 이후 새 공고가 열릴 때 이어서 알려드립니다. 관심공고에서 언제든 해제할 수 있어요.',
   },
   {
     q: '여기서 추천받으면 자격이 확인된 건가요?',
@@ -153,7 +153,7 @@ export default function ConsumerHome() {
             </div>
 
             <div className="cs-notice__caution">
-              소득·자산 등 세부 자격은 <strong>공식 공고문 확인 필요</strong>
+              소득·자산 등 <strong>자격요건 체크 요망</strong>
             </div>
           </div>
 
@@ -182,9 +182,6 @@ export default function ConsumerHome() {
       </section>
 
       {/* ── 지금 살펴볼 공고 ────────────────────────────── */}
-      {/* 히어로 다음 — 가장 빨리 사라지는 정보부터 흐른다 */}
-      <DeadlineTicker />
-
       <HomeNoticeStrip />
 
       {/* ── 준비 순서 ───────────────────────────────────── */}
@@ -210,7 +207,7 @@ export default function ConsumerHome() {
         <SectionHead index="03" title="다음에도, 처음부터 찾지 않도록" />
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 28 }}>
           <p className="cs-lead" style={{ maxWidth: '44ch' }}>
-            살고 싶은 동네와 주거비를 저장해두세요. 다음 방문에도 같은 조건으로 후보를 확인할 수 있어요. 새 공고·마감 알림은 수신 설정만 저장하며, 이메일 발송은 아직 준비 중입니다.
+            살고 싶은 동네와 주거비를 저장해두세요. 다음 방문에도 같은 조건으로 후보를 확인할 수 있어요. 알림에 동의하시면 그 자리에서 조건에 맞는 공고를 한 통 보내드리고, 새 공고·마감이 생길 때마다 이어서 알려드립니다.
           </p>
           <div>
             <Link href="/analyze" className="cs-btn cs-btn--ghost">
@@ -278,6 +275,11 @@ export default function ConsumerHome() {
           </Link>
         </div>
       </Reveal>
+
+      {/* ── 마감 티커 ───────────────────────────────────── */}
+      {/* 지면의 맨 끝이자 화면의 맨 아래. 스크롤 위치와 무관하게
+          가장 빨리 사라지는 정보를 늘 발치에 깔아둔다. */}
+      <DeadlineTicker />
     </>
   )
 }

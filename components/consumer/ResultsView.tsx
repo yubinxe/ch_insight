@@ -6,6 +6,7 @@ import type { Candidate } from '@/lib/crm/services/scoring'
 import { formatMan } from '@/lib/crm/services/scoring'
 import type { Property, SearchProfile } from '@/lib/crm/types'
 import NoticeCard from './NoticeCard'
+import SampleOnlyNotice from './SampleOnlyNotice'
 import { useConsumer } from './ConsumerProvider'
 import { useSignupGate } from './SignupGate'
 
@@ -86,6 +87,10 @@ export default function ResultsView() {
     housingTypes: '유형 전체',
   }
 
+  // 조건에 맞는 후보가 있어도 전부 예시일 수 있다. 그때는 "N건 찾았다"는 제목이
+  // 사실과 어긋나므로, 목록 위에 없다는 사실을 먼저 세운다.
+  const officialPrimary = data?.primary.filter(r => r.property.dataOrigin === 'OFFICIAL').length ?? 0
+
   return (
     <div className="cs-wrap" style={{ paddingTop: 44 }}>
       <header>
@@ -150,53 +155,72 @@ export default function ResultsView() {
             </h2>
 
             {data.primary.length === 0 ? (
-              <div className="cs-empty">
-                <div className="cs-empty__title">지금은 조건에 맞는 공고가 없어요</div>
-                <p className="cs-empty__desc">
-                  지역을 넓히거나 예산을 조금 올리면 후보가 생길 수 있어요.
-                  <br />
-                  조건을 저장해두시면 새 공고가 올라올 때 알려드릴게요.
-                </p>
-                <div
-                  style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 24, flexWrap: 'wrap' }}
-                >
-                  <Link href="/analyze" className="cs-btn cs-btn--ghost">
-                    조건 바꾸기
-                  </Link>
-                  <button
-                    className="cs-btn cs-btn--primary"
-                    onClick={() => gate.open({ kind: 'ALERT_NEW', propertyId: null })}
-                  >
-                    새 공고 알림 받기
-                  </button>
-                </div>
-              </div>
+              <SampleOnlyNotice
+                scope={`${profile.regions.join(' · ')} 조건으로`}
+                sampleCount={0}
+                actions={
+                  <>
+                    <Link href="/analyze" className="cs-btn cs-btn--ghost">
+                      조건 바꾸기
+                    </Link>
+                    <button
+                      className="cs-btn cs-btn--primary"
+                      onClick={() => gate.open({ kind: 'ALERT_NEW', propertyId: null })}
+                    >
+                      새 공고 알림 받기
+                    </button>
+                  </>
+                }
+              />
             ) : (
-              <div className="cs-notice-grid" style={{ marginTop: 22 }}>
-                {data.primary.map((row, i) => (
+              <>
+                {/* 후보는 있는데 전부 예시인 경우. 카드 배지만으로는 놓치기 쉽다. */}
+                {officialPrimary === 0 && (
+                  <SampleOnlyNotice
+                    scope={`${profile.regions.join(' · ')} 조건으로`}
+                    sampleCount={data.primary.length}
+                    actions={
+                      <button
+                        className="cs-btn cs-btn--primary"
+                        onClick={() => gate.open({ kind: 'ALERT_NEW', propertyId: null })}
+                      >
+                        새 공고 열리면 알림 받기
+                      </button>
+                    }
+                  />
+                )}
+                <div className="cs-notice-grid" style={{ marginTop: 22 }}>
+                  {data.primary.map((row, i) => (
+                    <NoticeCard
+                      key={row.property.id}
+                      property={row.property}
+                      candidate={row.candidate}
+                      index={i}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* 조건을 벗어난 후보는 지우지 않되, 같은 층에 두지도 않는다.
+              지면 톤을 한 단 내린 판 위에 올려 "참고"임을 배치로 말한다. */}
+          {data.relaxed.length > 0 && (
+            <section className="cs-nearby" style={{ marginTop: 52 }}>
+              <span className="cs-nearby__eyebrow">참고 후보</span>
+              <h2 className="cs-nearby__title">조건을 조금 벗어나지만, 눈여겨볼 만한 곳</h2>
+              <p className="cs-nearby__desc">
+                입력하신 상한을 넘거나 조건에서 비껴간 공고입니다. 얼마나 벗어나는지 카드마다 적어
+                두었으니, 넓혀볼지는 직접 정해 주세요.
+              </p>
+              <div className="cs-notice-grid">
+                {data.relaxed.map(row => (
                   <NoticeCard
                     key={row.property.id}
                     property={row.property}
                     candidate={row.candidate}
-                    index={i}
+                    variant="nearby"
                   />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* 예산을 넘는 후보는 초과금액과 함께 별도 영역에 */}
-          {data.relaxed.length > 0 && (
-            <section style={{ marginTop: 52 }}>
-              <h2 className="cs-section-title" style={{ fontSize: 24 }}>
-                예산을 조금 넘지만 조건은 잘 맞는 공고
-              </h2>
-              <p className="cs-sub" style={{ marginTop: 10, marginBottom: 22 }}>
-                입력하신 상한을 넘는 금액이라 따로 보여드려요.
-              </p>
-              <div className="cs-notice-grid">
-                {data.relaxed.map(row => (
-                  <NoticeCard key={row.property.id} property={row.property} candidate={row.candidate} />
                 ))}
               </div>
             </section>
@@ -224,7 +248,8 @@ export default function ResultsView() {
                       새 공고 알림을 준비해둘까요?
                     </h2>
                     <p className="cs-sub" style={{ marginTop: 12, maxWidth: '44ch', margin: '12px auto 0' }}>
-                      {profile.regions.join(' · ')} 지역의 수신 설정을 저장해요. 이메일 발송은 아직 연결 전입니다.
+                      동의하시면 {profile.regions.join(' · ')} 조건에 맞는 공고를 지금 한 통 보내드리고, 이후 새 공고가
+                      열릴 때마다 이어서 알려드려요.
                     </p>
                     <button
                       className="cs-btn cs-btn--primary"

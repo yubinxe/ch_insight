@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { resolveSession, setSessionCookie } from '@/lib/consumer/session'
 import { EmailInUseError, signUp, track, rotateSession } from '@/lib/consumer/store'
 import { authLimited, checkMutation } from '@/lib/consumer/security'
+import { linkAccountToCrm } from '@/lib/consumer/account'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,11 @@ export async function POST(req: NextRequest) {
     }
     if (authLimited(email)) return Response.json({ error: '잠시 후 다시 시도해 주세요.' }, { status: 429 })
     const user = signUp(session.id, email, typeof nickname === 'string' ? nickname.slice(0, 40) : '', password)
+    // 알림은 CRM 고객 레코드의 이메일로 나간다. 여기서 이어붙이지 않으면
+    // 가입은 되는데 메일만 영영 안 나가는 상태가 된다. 실패해도 가입은 막지 않는다.
+    await linkAccountToCrm(session.id, user).catch(err => {
+      console.error('linkAccountToCrm(signup)', err)
+    })
     rotateSession(session)
     await setSessionCookie(session.id)
     track(session, 'signup_completed', {})

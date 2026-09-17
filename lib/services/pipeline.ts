@@ -26,7 +26,8 @@ import type {
  */
 const provider: NotificationProvider = emailProvider
 
-function baseUrl() {
+/** 알림 링크에 쓸 사이트 주소. 메일 본문이 상대경로를 이해하지 못한다. */
+export function baseUrl() {
   return (
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
@@ -59,7 +60,7 @@ export function buildMessage(
     '',
     opp.application_end ? `접수 마감\n${opp.application_end}` : '접수 마감일이 공고에 공개되지 않았습니다',
     '',
-    '※ 소득·자산 등 세부 자격은 공식 공고문 확인이 필요합니다.',
+    '※ 소득·자산 등 자격요건 체크 요망 — 지원 전 공식 모집공고문을 확인해 주세요.',
   ]
   if (opp.is_demo) lines.push('※ 이 공고는 서비스 구성을 보여드리기 위한 예시 데이터입니다.')
   return lines.join('\n')

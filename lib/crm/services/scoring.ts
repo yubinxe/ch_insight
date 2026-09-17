@@ -324,6 +324,14 @@ function buildReasons(customer: SearchConditions, property: Property, budget: Bu
   return out
 }
 
+/**
+ * 모든 후보에 빠짐없이 붙는 마지막 한 줄.
+ *
+ * 자격 판정 엔진이 없으므로 이 문장은 예외 없이 참이고, 화면 세 곳과 이메일이
+ * 같은 말을 해야 한다. 각자 적어두면 한 곳만 고쳐지고 나머지는 옛말로 남는다.
+ */
+export const ELIGIBILITY_CAUTION = '소득·자산·거주기간 등 자격요건 체크 요망'
+
 function buildCautions(
   customer: SearchConditions,
   property: Property,
@@ -354,22 +362,23 @@ function buildCautions(
   if (h.kind === 'OTHER') out.push(`관심 목록에 없는 유형 (${property.housingType})`)
 
   // 공고가 임대조건·면적을 주지 않는 경우. 비었다고 예산 이내라고 말하지 않는다.
+  // 카드에는 이 중 첫 줄만 들어가므로 한 호흡에 읽히게 끊어 쓴다.
   if (budget.unverified.length === 2) {
-    out.push('공급금액이 공고 목록에 없어 예산 충족 여부를 확인하지 못했습니다 — 모집공고문을 확인해 주세요')
+    out.push('공급금액 미공개 — 모집공고문 확인 요망')
   } else if (budget.unverified.includes('DEPOSIT')) {
-    out.push('보증금이 공고 목록에 없어 예산 충족 여부를 확인하지 못했습니다')
+    out.push('보증금 미공개 — 모집공고문 확인 요망')
   } else if (budget.unverified.includes('RENT')) {
-    out.push('월 임대료가 공고 목록에 없어 예산 충족 여부를 확인하지 못했습니다')
+    out.push('월 임대료 미공개 — 모집공고문 확인 요망')
   }
-  if (property.area === null) out.push('전용면적이 공고 목록에 없어 면적 조건을 비교하지 못했습니다')
+  if (property.area === null) out.push('전용면적 미공개 — 모집공고문 확인 요망')
 
   // 자격 엔진이 없으므로 항상 미확인이다. 미확인을 불충족으로 단정하지 않는다.
-  out.push('소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다')
-  if (customer.maxDeposit === null || customer.maxMonthlyRent === null) out.push('정하지 않은 주거비 항목은 예산 충족 여부를 확인하지 않았습니다')
+  out.push(ELIGIBILITY_CAUTION)
+  if (customer.maxDeposit === null || customer.maxMonthlyRent === null) out.push('미입력 주거비 항목 — 예산 대조 안 함')
 
-  if (urgency.level === 'CLOSED') out.push('접수가 마감된 공고입니다')
-  if (urgency.level === 'UNKNOWN') out.push('접수 마감일이 공고에 공개되지 않았습니다')
-  if (!property.resultDate) out.push('당첨자 발표일이 공고에 공개되지 않았습니다')
+  if (urgency.level === 'CLOSED') out.push('접수 마감된 공고')
+  if (urgency.level === 'UNKNOWN') out.push('접수 마감일 미공개')
+  if (!property.resultDate) out.push('당첨자 발표일 미공개')
 
   return out
 }

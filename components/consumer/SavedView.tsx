@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import type { UrgencyInfo } from '@/lib/crm/services/scoring'
+import { ELIGIBILITY_CAUTION, type UrgencyInfo } from '@/lib/crm/services/scoring'
 import type { Property } from '@/lib/crm/types'
 import NoticeCard from './NoticeCard'
 import { useConsumer } from './ConsumerProvider'
@@ -30,7 +30,7 @@ function neutral(propertyId: string, urgency: UrgencyInfo) {
     eligibility: 'UNKNOWN' as const,
     confidence: 'PARTIAL' as const,
     reasons: [],
-    cautions: ['소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다'],
+    cautions: [ELIGIBILITY_CAUTION],
     tier: 'PRIMARY' as const,
     excludedBy: [] as never[],
   }
@@ -114,7 +114,7 @@ export default function SavedView() {
             ))}
           </div>
           <p className="cs-note" style={{ marginTop: 14 }}>
-            알림 발송 기능은 아직 연결 전입니다. 지금은 동의하신 내용만 저장하고 실제로 보내지 않습니다.
+            알림은 동의하신 이메일 주소로 발송됩니다. 조건을 바꾸시면 다음 발송부터 반영돼요.
           </p>
         </section>
       )}

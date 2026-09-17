@@ -1,14 +1,38 @@
 import { checkMutation } from '@/lib/consumer/security'
 import { NextRequest } from 'next/server'
 import { resolveSession } from '@/lib/consumer/session'
-import { listAlerts, subscribeAlert, track, unsubscribeAlert } from '@/lib/consumer/store'
+import { getUser, listAlerts, subscribeAlert, track, unsubscribeAlert } from '@/lib/consumer/store'
 import { propertyById } from '@/lib/crm/store'
 import * as repo from '@/lib/db/repo'
-import type { AlertScope } from '@/lib/crm/types'
+import { sendConditionDigest } from '@/lib/services/digest'
+import { baseUrl } from '@/lib/services/pipeline'
+import type { AlertScope, SearchProfile } from '@/lib/crm/types'
 
 export const dynamic = 'force-dynamic'
 
 const SCOPES: AlertScope[] = ['NEW_NOTICE', 'DEADLINE']
+
+/**
+ * 동의 직후 보내는 첫 다이제스트.
+ *
+ * 화면에 그대로 옮길 수 있도록 결과를 좁혀서 돌려준다. 본문 전체는 보내지 않는다 —
+ * 메일에 무엇이 담겼는지는 메일함이 답할 일이고, 화면은 "갔는지"만 알면 된다.
+ */
+async function sendFirstDigest(userId: string | null, profile: SearchProfile) {
+  const user = getUser(userId)
+  const outcome = await sendConditionDigest({
+    to: user?.email ?? null,
+    nickname: user?.nickname ?? null,
+    profile,
+    siteUrl: baseUrl(),
+  })
+  return {
+    status: outcome.status,
+    detail: outcome.detail,
+    officialCount: outcome.officialCount,
+    relaxedCount: outcome.relaxedCount,
+  }
+}
 
 export async function GET() {
   const session = await resolveSession()
@@ -58,7 +82,18 @@ export async function POST(req: NextRequest) {
 
     track(session, 'alert_opted_in', { scope, propertyId: propertyId ?? null })
 
-    return Response.json({ alerts: listAlerts(session) })
+    // 조건 알림에 막 동의한 사람에게는 지금 상태를 한 통 보낸다.
+    // 다음 루틴까지 아무것도 오지 않으면 사용자는 그 침묵을 고장으로 읽는다.
+    // 발송이 실패해도 동의는 이미 저장됐다 — 구독 자체를 되돌리지 않는다.
+    const digest =
+      scope === 'NEW_NOTICE' && session.profile
+        ? await sendFirstDigest(session.userId, session.profile).catch(err => {
+            console.error('sendConditionDigest', err)
+            return null
+          })
+        : null
+
+    return Response.json({ alerts: listAlerts(session), digest })
   } catch (err) {
     return Response.json(
       { error: err instanceof Error ? err.message : '알림을 설정하지 못했습니다.' },

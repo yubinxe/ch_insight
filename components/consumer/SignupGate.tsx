@@ -39,14 +39,36 @@ const COPY: Record<PendingIntentKind, { title: string; desc: string; done: strin
   },
   ALERT_NEW: {
     title: '새 공고를 알려드릴까요?',
-    desc: '저장한 조건의 새 공고 알림을 선택해요. 현재는 수신 설정만 저장하며 이메일은 발송하지 않습니다.',
+    desc: '동의하시면 지금 조건에 맞는 공고를 바로 한 통 보내드리고, 이후 새 공고가 열릴 때마다 이어서 알려드려요.',
     done: '이 조건으로 새 공고를 확인할게요',
   },
   ALERT_DEADLINE: {
     title: '마감 전에 알려드릴까요?',
-    desc: '이 공고의 마감 알림을 선택해요. 현재는 수신 설정만 저장하며 이메일은 발송하지 않습니다.',
+    desc: '이 공고의 접수 마감이 가까워지면 이메일로 알려드려요.',
     done: '마감 알림을 설정했어요',
   },
+}
+
+/** 동의 직후 보낸 첫 다이제스트의 결과. 서버가 알려준 것만 옮긴다. */
+interface DigestInfo {
+  status: 'SENT' | 'PREVIEW' | 'FAILED'
+  officialCount: number
+}
+
+/**
+ * 메일이 갔는지를 있는 그대로 적는다.
+ * 발송 키가 없거나 실패했을 때 "보냈습니다"라고 말하면, 사용자는 받은편지함을
+ * 뒤지다 우리를 의심하게 된다. 갔으면 갔다고, 안 갔으면 안 갔다고 쓴다.
+ */
+function digestNote(d: DigestInfo | null): string {
+  if (!d) return '관심공고에서 바로 확인할 수 있어요.'
+  if (d.status === 'SENT') {
+    return d.officialCount > 0
+      ? `지금 조건에 맞는 공고 ${d.officialCount}건을 메일로 보내드렸어요.`
+      : '지금은 진행 중인 공고가 없어 그 사실을 메일로 보내드렸어요. 새 공고가 열리면 알려드릴게요.'
+  }
+  if (d.status === 'FAILED') return '메일을 보내지 못했어요. 수신 설정은 저장했으니 다음 발송에 포함됩니다.'
+  return '수신 설정을 저장했어요. 메일 발송 준비가 끝나는 대로 이 조건부터 보내드립니다.'
 }
 
 export default function SignupGate({ children }: { children: ReactNode }) {
@@ -60,11 +82,13 @@ export default function SignupGate({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
+  const [digest, setDigest] = useState<DigestInfo | null>(null)
 
   const open = useCallback((r: GateRequest) => {
     setReq(r)
     setError(null)
     setDone(null)
+    setDigest(null)
     setConsent(false)
     setPassword('')
     setLoginMode(false)
@@ -129,6 +153,8 @@ export default function SignupGate({ children }: { children: ReactNode }) {
         })
         const json = await res.json().catch(() => null)
         if (!res.ok) throw new Error(json?.error ?? '알림을 설정하지 못했어요.')
+        // 동의 직후 나간 첫 메일의 결과. 없으면(마감 알림 등) null 로 둔다.
+        setDigest((json?.digest as DigestInfo | undefined) ?? null)
       } else if (req.propertyId) {
         const savedResponse = await fetch('/api/saved', {
           method: 'POST',
@@ -173,7 +199,7 @@ export default function SignupGate({ children }: { children: ReactNode }) {
                 </div>
                 <h2 className="cs-modal__title">{done}</h2>
                 <p className="cs-sub" style={{ marginBottom: 24 }}>
-                  관심공고에서 바로 확인할 수 있어요.
+                  {digestNote(digest)}
                 </p>
                 <a href="/saved" className="cs-btn cs-btn--primary cs-btn--block">
                   관심공고 보러가기

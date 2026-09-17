@@ -18,6 +18,10 @@ interface Item {
  * 이 서비스에서 시간이 가장 빨리 움직이는 값은 접수 마감이다.
  * 홈에 가만히 있는 배너를 두는 대신, 지금 마감이 가까운 공고를 흘려보낸다.
  * 장식이 아니라 가장 짧은 시간 안에 사라질 정보다.
+ *
+ * 지면 안을 흐르지 않고 화면 맨 아래에 고정한다(`.cs-ticker`). 마감은
+ * 스크롤 위치를 기다려 주지 않으므로 어디를 보고 있든 발치에 남는다.
+ * 챗봇 버튼은 이 막대 위로 비켜선다.
  */
 export default function DeadlineTicker() {
   const [items, setItems] = useState<Item[]>([])

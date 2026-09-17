@@ -216,7 +216,8 @@ export function buildReason(pref: PreferenceRow, opp: OpportunityRow, budget: Bu
   }
 
   const tail = cautions.length ? ` ${cautions.join(' · ')}.` : ''
-  return `${head}${tail} 소득·자산 등 세부 자격은 공식 공고문 확인이 필요합니다.`
+  // 마지막 한 줄은 늘 같은 말이다. 길게 늘이지 않고 할 일만 남긴다.
+  return `${head}${tail} 소득·자산 등 자격요건 체크 요망.`
 }
 
 export function scoreMatch(pref: PreferenceRow, opp: OpportunityRow, now = new Date()): MatchResult {

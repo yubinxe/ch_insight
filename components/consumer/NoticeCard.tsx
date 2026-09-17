@@ -24,23 +24,49 @@ export function statusBadge(urgency: Candidate['urgency']) {
   }
 }
 
+/** 상한을 얼마나 넘는지 — 감추면 사용자가 판단할 수 없다 */
+function overageLabel(candidate: Candidate): string | null {
+  const bits: string[] = []
+  if (candidate.budget.depositOver > 0) bits.push(`보증금 ${formatManOr(candidate.budget.depositOver)}`)
+  if (candidate.budget.rentOver > 0) bits.push(`월 임대료 ${candidate.budget.rentOver.toLocaleString()}만원`)
+  return bits.length ? `${bits.join(' · ')} 초과` : null
+}
+
 export default function NoticeCard({
   property,
   candidate,
   showReasons = true,
   index,
+  variant = 'default',
 }: {
   property: Property
   candidate: Candidate | null
   showReasons?: boolean
   /** 카탈로그 인덱스 (0-based). 주면 카드 머리에 번호가 붙는다 */
   index?: number
+  /**
+   * 카드가 놓이는 층.
+   *
+   * `nearby` 는 조건을 벗어난 후보가 서는 자리다. 흰 카드에서 내려와 지면과
+   * 같은 톤으로 가라앉히고, 괘선만 남긴다 — 조건에 맞는 후보와 나란히 두면
+   * 같은 자격으로 읽히기 때문이다. 지우지는 않는다. 볼지 말지는 사용자가 정한다.
+   */
+  variant?: 'default' | 'nearby'
 }) {
   const badge = candidate ? statusBadge(candidate.urgency) : null
   const overBudget = candidate ? candidate.budget.depositOver > 0 || candidate.budget.rentOver > 0 : false
+  const overage = candidate && variant === 'nearby' ? overageLabel(candidate) : null
+
+  // 초과분을 카드 머리에 이미 적었으면 '확인 필요' 줄에서는 건너뛴다.
+  // buildCautions 는 초과 항목을 맨 앞에 쌓으므로 그만큼만 밀면 된다.
+  // 같은 말을 두 줄에 적으면 두 번째 줄은 읽히지 않는다.
+  const skip = overage
+    ? (candidate!.budget.depositOver > 0 ? 1 : 0) + (candidate!.budget.rentOver > 0 ? 1 : 0)
+    : 0
+  const caution = candidate ? (candidate.cautions[skip] ?? candidate.cautions[0]) : null
 
   return (
-    <article className="cs-notice">
+    <article className={variant === 'nearby' ? 'cs-notice cs-notice--nearby' : 'cs-notice'}>
       <Link
         href={`/notices/${property.id}`}
         className="cs-notice__link"
@@ -66,8 +92,12 @@ export default function NoticeCard({
             {badge.text}
           </span>
         )}
-        {overBudget && <span className="cs-badge cs-badge--check">예산 초과</span>}
+        {/* 유사 후보 층에서는 초과액 자체를 적는다. "예산 초과" 넉 자만으로는
+            10만원 차이와 1억 차이가 같은 말이 된다. */}
+        {overBudget && variant !== 'nearby' && <span className="cs-badge cs-badge--check">예산 초과</span>}
       </div>
+
+      {overage && <div className="cs-notice__over">{overage}</div>}
 
       <h3 className="cs-notice__name">{property.name}</h3>
       <p className="cs-notice__where">
@@ -104,11 +134,7 @@ export default function NoticeCard({
         </ul>
       )}
 
-      {candidate && (
-        <div className="cs-notice__caution">
-          확인 필요 · {candidate.cautions[0]}
-        </div>
-      )}
+      {caution && <div className="cs-notice__caution">확인 필요 · {caution}</div>}
 
       <div className="cs-notice__foot">
         <div className="cs-notice__meta">

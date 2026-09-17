@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { Property } from '@/lib/crm/types'
-import type { UrgencyInfo } from '@/lib/crm/services/scoring'
+import { ELIGIBILITY_CAUTION, type UrgencyInfo } from '@/lib/crm/services/scoring'
 import NoticeCard from './NoticeCard'
 import FilterRow, { type FilterOption } from './FilterRow'
+import SampleOnlyNotice from './SampleOnlyNotice'
 
 interface NoticeRow {
   property: Property
@@ -27,6 +28,12 @@ export default function HomeNoticeStrip() {
   const loading = result?.key !== key
   const rows = result?.rows ?? []
   const error = result?.key === key ? result.error : null
+
+  // 예시만 남았는지는 응답의 dataOrigin 으로 센다. 필터를 바꾸면 그대로 따라온다.
+  const officialCount = rows.filter(r => r.property.dataOrigin === 'OFFICIAL').length
+  const filterScope = [region === '전체' ? '' : region, type === '전체' ? '' : type]
+    .filter(Boolean)
+    .join(' · ')
 
   useEffect(() => {
     let alive = true
@@ -100,7 +107,19 @@ export default function HomeNoticeStrip() {
           <p className="cs-empty__desc">지역이나 유형을 바꿔서 다시 살펴보세요.</p>
         </div>
       ) : (
-        <div className="cs-notice-grid">
+        <>
+          {officialCount === 0 && (
+            <SampleOnlyNotice
+              scope={filterScope ? `${filterScope} 조건으로` : undefined}
+              sampleCount={rows.length}
+              actions={
+                <Link href="/analyze" className="cs-btn cs-btn--ghost">
+                  내 조건으로 찾아보기
+                </Link>
+              }
+            />
+          )}
+          <div className="cs-notice-grid" style={officialCount === 0 ? { marginTop: 26 } : undefined}>
           {rows.map((row, i) => (
             <NoticeCard
               key={row.property.id}
@@ -122,19 +141,24 @@ export default function HomeNoticeStrip() {
                 eligibility: 'UNKNOWN',
                 confidence: 'PARTIAL' as const,
                 reasons: [],
-                cautions: ['소득·자산·거주기간 등 자격요건은 아직 확인하지 않았습니다'],
+                cautions: [ELIGIBILITY_CAUTION],
                 tier: 'PRIMARY',
                 excludedBy: [],
               }}
               showReasons={false}
             />
           ))}
-        </div>
+          </div>
+        </>
       )}
 
-      <p className="cs-note" style={{ marginTop: 18 }}>
-        표시된 임대 공고는 서비스 구성을 보여드리기 위한 예시 데이터입니다.
-      </p>
+      {/* 실제 공고가 섞여 있을 때만 적는다. 0건이면 위 안내가 이미 말했다. */}
+      {officialCount > 0 && rows.length > officialCount && (
+        <p className="cs-note" style={{ marginTop: 18 }}>
+          실제 공고 {officialCount}건과 화면 구성을 위한 예시 {rows.length - officialCount}건이 함께
+          있습니다.
+        </p>
+      )}
     </section>
   )
 }
