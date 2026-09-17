@@ -31,13 +31,13 @@ export default function WinnerPredictionSlideover({
   if (!open) return null
 
   return (
-    <div className="slideover-root" role="dialog" aria-modal="true" aria-label="당첨 확률 계산기">
+    <div className="slideover-root" role="dialog" aria-modal="true" aria-label="내 가점 비교">
       <button type="button" className="slideover-backdrop" aria-label="닫기" onClick={onClose} />
       <aside className="slideover-panel">
         <header className="slideover-header">
           <div>
-            <div className="slideover-eyebrow">AI 당첨 예측</div>
-            <h2 className="slideover-title">{complexName || '당첨 확률 계산'}</h2>
+            <div className="slideover-eyebrow">과거 당첨가점 비교</div>
+            <h2 className="slideover-title">{complexName || '내 가점 비교'}</h2>
           </div>
           <button type="button" className="slideover-close" onClick={onClose} aria-label="닫기">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

@@ -1,4 +1,12 @@
-/** 민영·국민 일반공급 가점제 기준 (최대 84점) */
+/**
+ * 민영·국민 일반공급 가점 계산과 "과거 당첨가점 참고 비교".
+ *
+ * 당첨 확률은 산출하지 않는다.
+ * 검증되지 않은 계수로 만든 확률(%)은 공식 예측처럼 읽히므로 제공하지 않으며,
+ * 대신 공개 통계상의 평균·최저 당첨가점과 내 가점의 실제 차이만 보여준다.
+ *
+ * 가점 산식 자체의 공식 정확성은 별도 검증 전까지 확정하지 않는다.
+ */
 
 export interface ScoreInput {
   /** 무주택 기간 (년) */
@@ -23,19 +31,29 @@ export interface ReferenceStats {
   median: number
   regionName: string
   statMonth: string
+  /** 집계에 사용한 공개 통계 행 수. 0이면 비교를 제공하지 않는다 */
   sampleCount: number
 }
 
-export type PredictionLevel = 'high' | 'medium' | 'low'
+/**
+ * 내 가점이 과거 당첨가점 분포의 어디쯤인지.
+ * 확률이 아니라 위치다.
+ */
+export type ComparisonBand = 'above' | 'near' | 'below' | 'insufficient'
 
-export interface PredictionResult {
-  probability: number
-  level: PredictionLevel
+export interface ScoreComparison {
+  band: ComparisonBand
+  /** 자료가 부족하면 false — 이때 비교 문구를 분석처럼 표시하지 않는다 */
+  dataSufficient: boolean
   headline: string
   insight: string
   detail: string
+  /** 평균 당첨가점과의 차이 (양수면 내가 높음). 자료 부족 시 null */
+  gapToAverage: number | null
+  /** 최저 당첨가점과의 차이. 자료 부족 시 null */
+  gapToCutline: number | null
   breakdown: ScoreBreakdown
-  reference: ReferenceStats
+  reference: ReferenceStats | null
 }
 
 export const SCORE_LIMITS = {
@@ -48,14 +66,6 @@ export function clampHomelessYears(years: number) {
   return Math.min(SCORE_LIMITS.homelessYearsMax, Math.max(0, Math.floor(years)))
 }
 
-export function clampDependents(n: number) {
-  return Math.min(SCORE_LIMITS.dependentsMax, Math.max(0, Math.floor(n)))
-}
-
-export function clampAccountYears(years: number) {
-  return Math.min(SCORE_LIMITS.accountYearsMax, Math.max(0, Math.floor(years)))
-}
-
 export function calculateSubscriptionScore(input: ScoreInput): ScoreBreakdown {
   const homeless = Math.min(Math.max(0, Math.floor(input.homelessYears)) * 2, 32)
   const dependents = Math.min(Math.max(0, Math.floor(input.dependents)) * 5, 35)
@@ -63,106 +73,115 @@ export function calculateSubscriptionScore(input: ScoreInput): ScoreBreakdown {
   return { homeless, dependents, account, total: homeless + dependents + account }
 }
 
-function clamp(n: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, n))
-}
-
-export function predictWinProbability(
+/**
+ * 내 가점을 과거 당첨가점 통계와 비교한다.
+ * ref 가 없거나 표본이 0이면 비교하지 않고 자료 부족으로 표시한다.
+ */
+export function compareToReference(
   userScore: number,
-  ref: ReferenceStats,
+  ref: ReferenceStats | null,
   complexName?: string,
-): PredictionResult {
-  const spread = Math.max(ref.max - ref.min, 8)
-  const avgDiff = userScore - ref.avg
-  const cutlineGap = userScore - ref.min
-
-  let probability =
-    18 +
-    ((userScore - ref.min) / spread) * 52 +
-    (avgDiff > 0 ? Math.min(avgDiff * 2.2, 18) : Math.max(avgDiff * 2.5, -22))
-
-  if (userScore >= ref.max - 1) probability = Math.max(probability, 86)
-  if (userScore >= ref.avg + 5) probability = Math.max(probability, 68)
-  if (userScore < ref.min - 3) probability = Math.min(probability, 12)
-  if (userScore < ref.avg - 8) probability = Math.min(probability, 22)
-
-  probability = Math.round(clamp(probability, 5, 94))
-
-  const level: PredictionLevel =
-    probability >= 62 ? 'high' : probability >= 38 ? 'medium' : 'low'
-
-  const target = complexName ? `「${complexName}」` : `최근 ${ref.regionName} 당첨 데이터`
-  const absDiff = Math.abs(Math.round(avgDiff * 10) / 10)
-
-  let insight: string
-  if (avgDiff > 0.5) {
-    insight = `${target} 기준, 당신의 가점은 최근 평균 당첨 가점(${ref.avg.toFixed(1)}점)보다 ${absDiff}점 높습니다.`
-  } else if (avgDiff < -0.5) {
-    insight = `${target} 기준, 최근 평균 당첨 가점이 당신보다 ${absDiff}점 높습니다.`
-  } else {
-    insight = `${target} 기준, 당신의 가점은 최근 평균 당첨 가점과 비슷한 수준입니다.`
+): Omit<ScoreComparison, 'breakdown'> {
+  if (!ref || ref.sampleCount === 0) {
+    return {
+      band: 'insufficient',
+      dataSufficient: false,
+      headline: '비교할 공개 통계가 아직 없습니다',
+      insight:
+        '선택하신 조건에 해당하는 당첨가점 통계를 불러오지 못했습니다. 자료가 없는 상태에서 임의의 평균이나 확률을 만들어 보여드리지 않습니다.',
+      detail: '지역이나 기간을 바꾸면 집계된 통계가 있을 수 있습니다.',
+      gapToAverage: null,
+      gapToCutline: null,
+      reference: ref,
+    }
   }
 
-  let detail: string
-  if (cutlineGap >= 5) {
-    detail = `최근 커트라인(최저 당첨) ${ref.min.toFixed(1)}점 대비 ${cutlineGap.toFixed(1)}점 여유가 있어 상대적으로 유리한 편입니다.`
-  } else if (cutlineGap >= 0) {
-    detail = `최근 커트라인 ${ref.min.toFixed(1)}점 근처입니다. 경쟁률·면적에 따라 결과가 달라질 수 있습니다.`
-  } else {
-    detail = `최근 커트라인 ${ref.min.toFixed(1)}점보다 ${Math.abs(cutlineGap).toFixed(1)}점 낮습니다. 특별공급·잔여세대 등 다른 경로도 검토해 보세요.`
-  }
+  const gapToAverage = Math.round((userScore - ref.avg) * 10) / 10
+  const gapToCutline = Math.round((userScore - ref.min) * 10) / 10
+  const absAvg = Math.abs(gapToAverage)
 
-  const headlines: Record<PredictionLevel, string> = {
-    high: '당첨 가능성이 높은 구간입니다',
-    medium: '평균 수준 — 조건에 따라 달라집니다',
-    low: '가점 보완 또는 대안 검토를 권장합니다',
-  }
+  const band: ComparisonBand = gapToAverage > 0.5 ? 'above' : gapToAverage < -0.5 ? 'below' : 'near'
 
-  return {
-    probability,
-    level,
-    headline: headlines[level],
-    insight,
-    detail,
-    breakdown: { homeless: 0, dependents: 0, account: 0, total: userScore },
-    reference: ref,
-  }
+  const target = complexName ? `「${complexName}」` : `${ref.regionName} 최근 당첨 통계`
+
+  const insight =
+    band === 'above'
+      ? `${target} 기준, 내 가점(${userScore}점)이 평균 당첨가점 ${ref.avg.toFixed(1)}점보다 ${absAvg}점 높습니다.`
+      : band === 'below'
+        ? `${target} 기준, 평균 당첨가점 ${ref.avg.toFixed(1)}점이 내 가점(${userScore}점)보다 ${absAvg}점 높습니다.`
+        : `${target} 기준, 내 가점(${userScore}점)은 평균 당첨가점 ${ref.avg.toFixed(1)}점과 비슷한 수준입니다.`
+
+  const detail =
+    gapToCutline >= 5
+      ? `최저 당첨가점 ${ref.min.toFixed(1)}점보다 ${gapToCutline}점 높습니다.`
+      : gapToCutline >= 0
+        ? `최저 당첨가점 ${ref.min.toFixed(1)}점과 ${gapToCutline}점 차이입니다. 공고·면적별로 편차가 큽니다.`
+        : `최저 당첨가점 ${ref.min.toFixed(1)}점보다 ${Math.abs(gapToCutline)}점 낮습니다. 특별공급 등 다른 경로도 함께 확인해 보세요.`
+
+  const headline =
+    band === 'above'
+      ? '평균 당첨가점보다 높습니다'
+      : band === 'below'
+        ? '평균 당첨가점보다 낮습니다'
+        : '평균 당첨가점과 비슷합니다'
+
+  return { band, dataSufficient: true, headline, insight, detail, gapToAverage, gapToCutline, reference: ref }
 }
 
-export function buildPrediction(
+export function buildComparison(
   input: ScoreInput,
-  ref: ReferenceStats,
+  ref: ReferenceStats | null,
   complexName?: string,
-): PredictionResult {
+): ScoreComparison {
   const breakdown = calculateSubscriptionScore(input)
-  const result = predictWinProbability(breakdown.total, ref, complexName)
-  return { ...result, breakdown }
+  return { ...compareToReference(breakdown.total, ref, complexName), breakdown }
 }
 
 export function aggregateReferenceStats(
-  rows: { AVRG_SCORE: string; LWET_SCORE: string; TOP_SCORE: string; MED_SCORE?: string; SUBSCRPT_AREA_CODE_NM?: string; STAT_DE?: string }[],
+  rows: {
+    AVRG_SCORE: string
+    LWET_SCORE: string
+    TOP_SCORE: string
+    MED_SCORE?: string
+    SUBSCRPT_AREA_CODE_NM?: string
+    STAT_DE?: string
+  }[],
   regionName: string,
 ): ReferenceStats | null {
   if (rows.length === 0) return null
 
-  const avgs = rows.map(r => parseFloat(r.AVRG_SCORE)).filter(Number.isFinite)
-  const mins = rows.map(r => parseFloat(r.LWET_SCORE)).filter(Number.isFinite)
-  const maxs = rows.map(r => parseFloat(r.TOP_SCORE)).filter(Number.isFinite)
-  const meds = rows.map(r => parseFloat(r.MED_SCORE || r.AVRG_SCORE)).filter(Number.isFinite)
+  /**
+   * 0 점은 집계에서 뺀다.
+   *
+   * 가점제로 0 점에 당첨되는 일은 사실상 없다. 청약홈 통계의 0 은
+   * '가점제 당첨 없음' 또는 '미발표'를 뜻하는 자리표다. 그대로 세면
+   * 최저 당첨가점이 0 점으로 떨어지고, 평균도 함께 끌려 내려간다.
+   */
+  const usable = (v: number) => Number.isFinite(v) && v > 0
+
+  const avgs = rows.map(r => parseFloat(r.AVRG_SCORE)).filter(usable)
+  const mins = rows.map(r => parseFloat(r.LWET_SCORE)).filter(usable)
+  const maxs = rows.map(r => parseFloat(r.TOP_SCORE)).filter(usable)
+  const meds = rows.map(r => parseFloat(r.MED_SCORE || r.AVRG_SCORE)).filter(usable)
 
   if (avgs.length === 0) return null
 
   const avg = avgs.reduce((a, b) => a + b, 0) / avgs.length
-  const min = mins.length ? Math.min(...mins) : avg - 8
-  const max = maxs.length ? Math.max(...maxs) : avg + 8
+  // 없는 값을 추정으로 채우지 않는다. 실제로 집계된 값만 쓴다.
+  if (mins.length === 0 || maxs.length === 0) return null
+
   const median = meds.length ? meds.reduce((a, b) => a + b, 0) / meds.length : avg
-  const months = rows.map(r => r.STAT_DE).filter(Boolean) as string[]
-  const statMonth = months.sort().reverse()[0] ?? ''
+  // 열두 달을 모아 세므로 한 달을 적으면 거짓이 된다. 기간으로 적는다.
+  const months = (rows.map(r => r.STAT_DE).filter(Boolean) as string[]).sort()
+  const label = (m: string) => (m.length === 6 ? `${m.slice(0, 4)}.${m.slice(4, 6)}` : m)
+  const first = months[0]
+  const last = months[months.length - 1]
+  const statMonth = !first ? '' : first === last ? label(first) : `${label(first)} ~ ${label(last)}`
 
   return {
     avg: Math.round(avg * 10) / 10,
-    min: Math.round(min * 10) / 10,
-    max: Math.round(max * 10) / 10,
+    min: Math.round(Math.min(...mins) * 10) / 10,
+    max: Math.round(Math.max(...maxs) * 10) / 10,
     median: Math.round(median * 10) / 10,
     regionName,
     statMonth,
@@ -170,13 +189,10 @@ export function aggregateReferenceStats(
   }
 }
 
-/** API 데이터 없을 때 사용하는 보수적 기본값 */
-export const DEFAULT_REFERENCE: ReferenceStats = {
-  avg: 58.2,
-  min: 52.0,
-  max: 78.0,
-  median: 57.5,
-  regionName: '전국',
-  statMonth: '',
-  sampleCount: 0,
+export function clampDependents(n: number) {
+  return Math.min(SCORE_LIMITS.dependentsMax, Math.max(0, Math.floor(n)))
+}
+
+export function clampAccountYears(years: number) {
+  return Math.min(SCORE_LIMITS.accountYearsMax, Math.max(0, Math.floor(years)))
 }

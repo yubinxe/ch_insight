@@ -76,12 +76,10 @@ export default function CompetitionTab() {
   const [allStats, setAllStats]                   = useState<CompetitionStatItem[]>([])
   const [availableMonths, setAvailableMonths]     = useState<string[]>([])
   const [selectedMonth, setSelectedMonth]         = useState('')
-  const [statsLoading, setStatsLoading]           = useState(false)
+  const [statsLoading, setStatsLoading]           = useState(true)
   const [statsError, setStatsError]               = useState('')
 
   useEffect(() => {
-    setStatsLoading(true)
-    setStatsError('')
     fetchCompetitionStats({ month: '' })
       .then(r => {
         const data = r.data ?? []

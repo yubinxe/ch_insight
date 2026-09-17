@@ -11,7 +11,7 @@ import {
   HOUSE_TYPE_PRIVATE,
   type HouseTypeFilter,
 } from '@/lib/house-types'
-import { InkTag, InkLink, Pagination } from '@/components/ui/interactive'
+import { InkLink, Pagination } from '@/components/ui/interactive'
 import {
   DateField,
   FilterSearch,

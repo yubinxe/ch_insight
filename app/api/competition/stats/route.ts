@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
+import { dataPortalKey } from '@/lib/config/data-portal-key'
 
 const BASE = 'https://api.odcloud.kr/api'
-const KEY = process.env.PUBLIC_DATA_API_KEY!
+const KEY = dataPortalKey()
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
