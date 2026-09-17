@@ -193,7 +193,13 @@ export default function NoticeMap() {
     const kakao = w.kakao
     const map = mapRef.current
 
-    overlaysRef.current.forEach(o => o.setMap(null))
+    // 표시를 그리다 나는 예외가 페이지를 통째로 내려앉히는 일을 겪었다.
+    // 지도는 거들 뿐이고 목록이 본체다. 그리기가 실패해도 지면은 남아야 한다.
+    try {
+      overlaysRef.current.forEach(o => o.setMap(null))
+    } catch {
+      /* 이전 표시를 못 지워도 새로 그리는 데는 지장이 없다 */
+    }
     overlaysRef.current = []
 
     data.pins.forEach(pin => {
@@ -214,16 +220,20 @@ export default function NoticeMap() {
       el.addEventListener('mouseenter', () => setHovered(pin.id))
       el.addEventListener('mouseleave', () => setHovered(null))
 
-      overlaysRef.current.push(
-        new kakao.maps.CustomOverlay({
-          map,
-          position: new kakao.maps.LatLng(pin.lat, pin.lng),
-          content: el,
-          yAnchor: 0.5,
-          xAnchor: 0.5,
-          clickable: true,
-        }),
-      )
+      try {
+        overlaysRef.current.push(
+          new kakao.maps.CustomOverlay({
+            map,
+            position: new kakao.maps.LatLng(pin.lat, pin.lng),
+            content: el,
+            yAnchor: 0.5,
+            xAnchor: 0.5,
+            clickable: true,
+          }),
+        )
+      } catch {
+        /* 한 건이 틀려도 나머지는 올라간다 */
+      }
     })
 
     // 지도를 움직이면 옆 목록이 따라온다. 보이는 것과 읽는 것을 어긋나게 두지 않는다.
@@ -241,12 +251,20 @@ export default function NoticeMap() {
       inView.sort((a, z) => (a.daysLeft ?? 9999) - (z.daysLeft ?? 9999))
       setVisible(inView)
     }
-    sync()
-    kakao.maps.event.addListener(map, 'idle', sync)
+    try {
+      sync()
+      kakao.maps.event.addListener(map, 'idle', sync)
+    } catch {
+      /* 범위를 못 따라가도 표시는 이미 올라가 있다 */
+    }
 
     return () => {
-      kakao.maps.event.removeListener(map, 'idle', sync)
-      overlaysRef.current.forEach(o => o.setMap(null))
+      try {
+        kakao.maps.event.removeListener(map, 'idle', sync)
+        overlaysRef.current.forEach(o => o.setMap(null))
+      } catch {
+        /* 떠나는 길에 난 예외로 다음 화면을 망치지 않는다 */
+      }
       overlaysRef.current = []
     }
   }, [ready, data])

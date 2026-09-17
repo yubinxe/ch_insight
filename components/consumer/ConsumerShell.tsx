@@ -6,8 +6,9 @@ import type { ReactNode } from 'react'
 import { useConsumer } from './ConsumerProvider'
 
 const NAV = [
-  { href: '/notices', label: '공고 찾기' },
+  // 처음 온 사람은 무엇을 고를지보다 무엇인지를 먼저 묻는다. 가이드를 앞에 둔다.
   { href: '/guide', label: '청약 가이드' },
+  { href: '/notices', label: '공고 찾기' },
   { href: '/saved', label: '관심공고' },
   { href: '/score', label: '가점 계산' },
   { href: '/stats', label: '경쟁률·통계' },

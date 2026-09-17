@@ -131,7 +131,20 @@ export default function ConsumerHome() {
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </Link>
-            <Link href="/notices" className="cs-btn cs-btn--text">
+            <Link href="/notices" className="cs-btn cs-btn--text cs-btn--map">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 5h16M4 12h16M4 19h10" />
+              </svg>
               모집공고 둘러보기
             </Link>
             {/* 목록과 지도는 같은 공고를 다르게 보는 두 창구다. 목록으로만
@@ -256,9 +269,14 @@ export default function ConsumerHome() {
       <Reveal as="section" className="cs-wrap cs-section">
         <SectionHead index="03" title="다음에도, 처음부터 찾지 않도록" />
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 28 }}>
-          <p className="cs-lead" style={{ maxWidth: '44ch' }}>
-            살고 싶은 동네와 주거비를 저장해두세요. 다음 방문에도 같은 조건으로 후보를 확인할 수 있어요. 알림에 동의하시면 그 자리에서 조건에 맞는 공고를 한 통 보내드리고, 새 공고·마감이 생길 때마다 이어서 알려드립니다.
-          </p>
+          <div className="cs-lead" style={{ maxWidth: '44ch' }}>
+            <p>살고 싶은 동네와 주거비를 저장해두세요.</p>
+            <p>다음 방문에도 같은 조건으로 후보를 바로 확인할 수 있어요.</p>
+            <p>
+              알림에 동의하시면 그 자리에서 조건에 맞는 공고를 한 통 보내드리고, 새 공고와 마감이
+              생길 때마다 이어서 알려드립니다.
+            </p>
+          </div>
           <div>
             <Link href="/analyze" className="cs-btn cs-btn--ghost">
               내 조건 저장하기

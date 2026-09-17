@@ -3761,3 +3761,241 @@ body:has(.cs-ticker) .cs-chat {
 a.cs-pin {
   text-decoration: none;
 }
+
+/* ═════════════════════════════════════════════════════════
+   마감 달력 — 단청의 두 색
+   분양은 주묵(朱), 임대는 쪽빛(藍). 원색 빨강·파랑은 한지 톤 위에서
+   혼자 튀어 그래프가 아니라 경고처럼 읽힌다. 채도를 낮추고 먹을 섞어
+   같은 지면의 색으로 들인다.
+
+   칸이 좁으면 네모가 점이 되고, 점은 세어지지 않는다. 기본 2주로 줄여
+   칸을 넓히고 네모도 키운다.
+   ═════════════════════════════════════════════════════════ */
+:root {
+  /* 주묵 계열 — 분양 */
+  --cal-sale: #A83A20;
+  --cal-sale-soft: #F3DCD4;
+  /* 쪽빛 계열 — 임대 */
+  --cal-rent: #2C4B75;
+  --cal-rent-soft: #D9E2ED;
+}
+
+.cs-cal__head {
+  align-items: flex-start;
+}
+.cs-cal__sub {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+.cs-cal__tools {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.cs-cal__key {
+  font-size: 15px;
+  color: var(--body);
+  font-weight: 500;
+}
+
+/* 기간 전환 — 작은 두 칸 */
+.cs-cal__span {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+}
+.cs-cal__spanbtn {
+  padding: 7px 15px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+.cs-cal__spanbtn[data-on='true'] {
+  background: var(--brand);
+  color: var(--paper);
+}
+
+/* 칸이 넓어졌으니 최소 폭을 키운다 */
+.cs-cal__plot {
+  grid-auto-columns: minmax(40px, 1fr);
+  margin-top: 30px;
+}
+.cs-cal__col {
+  min-height: calc(var(--peak) * 20px + 76px);
+}
+
+/* 네모 — 키우고 색으로 가른다. 테두리는 같은 색의 진한 쪽으로 둬서
+   흰 바탕에서도 윤곽이 남게 한다 */
+.cs-cal__cell {
+  width: 17px;
+  height: 17px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+.cs-cal__cell[data-kind='sale'] {
+  background: var(--cal-sale);
+  border-color: color-mix(in srgb, var(--cal-sale) 78%, #000);
+}
+.cs-cal__cell[data-kind='rent'] {
+  background: var(--cal-rent);
+  border-color: color-mix(in srgb, var(--cal-rent) 78%, #000);
+}
+.cs-cal__stack {
+  gap: 4px;
+  padding-bottom: 12px;
+}
+
+/* 건수는 먹으로 적는다 — 색은 네모가 이미 말하고 있다 */
+.cs-cal__count {
+  font-size: 14px;
+  color: var(--title);
+  text-decoration-color: var(--line);
+}
+.cs-cal__count:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+.cs-cal__d {
+  font-size: 15px;
+}
+.cs-cal__w {
+  font-size: 12px;
+}
+.cs-cal__axis {
+  padding-top: 10px;
+  gap: 3px;
+}
+
+/* 목록의 유형 표도 같은 두 색으로 */
+.cs-cal__tag {
+  border: 0;
+  color: var(--paper);
+  padding: 4px 0;
+}
+.cs-cal__tag[data-kind='sale'] {
+  background: var(--cal-sale);
+}
+.cs-cal__tag[data-kind='rent'] {
+  background: var(--cal-rent);
+}
+
+@media (max-width: 760px) {
+  .cs-cal__plot {
+    grid-auto-columns: 38px;
+  }
+  .cs-cal__cell {
+    width: 15px;
+    height: 15px;
+  }
+  .cs-cal__tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════
+   첫 화면이 준비되는 동안
+   회전하는 동그라미는 "기다려라"만 말한다. 지면의 뼈대를 먼저 세워
+   내용이 도착했을 때 자리가 바뀌지 않게 한다.
+   ═════════════════════════════════════════════════════════ */
+.cs-boot {
+  padding: 52px 0 96px;
+  background: var(--paper);
+  min-height: 70vh;
+}
+.cs-boot__mark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cs-boot__logo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--brand);
+  color: var(--paper);
+}
+.cs-boot__name {
+  font-family: var(--font-display), var(--font-brand), var(--font-sans);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--title);
+}
+.cs-boot__msg {
+  font-size: 16px;
+  color: var(--muted);
+}
+/* 진행을 재는 척하지 않는다. 얼마나 남았는지 모르면서 퍼센트를 보이면
+   그 숫자가 거짓말이 된다. 한 줄이 왕복하며 "살아 있다"만 말한다. */
+.cs-boot__bar {
+  height: 2px;
+  margin-top: 22px;
+  border-radius: 99px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.cs-boot__bar > span {
+  display: block;
+  width: 32%;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--brand);
+  animation: csBoot 1.25s var(--ease) infinite;
+}
+@keyframes csBoot {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(340%); }
+}
+.cs-boot__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: start;
+  margin-top: 44px;
+}
+@media (max-width: 1000px) {
+  .cs-boot__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-boot__grid > :last-child {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-boot__bar > span {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+
+/* 청약뉴스 — 주제와 언론사를 한 줄에. 오른쪽이 비어 보이던 자리를 채운다 */
+.cs-news__topics {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.cs-news__topics > :last-child {
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .cs-news__topics {
+    gap: 18px;
+  }
+}

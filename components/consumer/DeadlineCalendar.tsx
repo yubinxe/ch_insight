@@ -11,6 +11,13 @@ import { useEffect, useState } from 'react'
  *
  * 막대 대신 네모를 쌓는다. 높이만 있는 막대는 "많다"만 말하지만, 네모를 세면
  * 몇 건인지가 그대로 읽히고 분양과 임대가 어떻게 섞였는지도 함께 보인다.
+ *
+ * 색은 단청의 두 색을 쓴다 — 분양은 주묵(朱), 임대는 쪽빛(藍). 원색 빨강·파랑은
+ * 한지 톤의 지면에서 혼자 튀어 그래프가 아니라 경고처럼 읽힌다.
+ *
+ * 스물여덟 칸은 한 화면에 너무 많았다. 칸이 좁으면 네모가 점이 되고, 점은
+ * 세어지지 않는다. 기본을 2주로 줄여 칸을 넓히고, 더 보고 싶은 사람만 4주로
+ * 펼친다.
  */
 
 interface Day {
@@ -32,8 +39,8 @@ interface Notice {
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 
-/** 한 날에 이만큼 넘게 몰리면 머리에 건수를 적는다 — 세지 않아도 보이게 */
-const LABEL_FROM = 10
+/** 칸이 넓어졌으므로 한 건만 있어도 머리에 수를 적는다 — 세지 않아도 보이게 */
+const LABEL_FROM = 1
 /** 네모를 무한정 쌓지 않는다. 넘치면 마지막 칸에 남은 수를 적는다 */
 const MAX_CELLS = 24
 
@@ -43,34 +50,47 @@ function parse(date: string) {
 }
 
 export default function DeadlineCalendar() {
-  const [data, setData] = useState<{
-    today: string
-    days: Day[]
-    notices: Notice[]
-    within: number
-    beyond: number
-    undated: number
+  /** 기본은 2주. 칸을 넓게 두는 쪽이 세는 데 유리하다 */
+  const [weeks, setWeeks] = useState<2 | 4>(2)
+  /** 어떤 기간의 결과인지 함께 담아, 로딩 여부를 파생값으로 계산한다 */
+  const [result, setResult] = useState<{
+    key: number
+    data: {
+      today: string
+      days: Day[]
+      notices: Notice[]
+      within: number
+      beyond: number
+      undated: number
+    } | null
+    error: string | null
   } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+
+  const data = result?.key === weeks ? result.data : null
+  const error = result?.key === weeks ? result.error : null
   /** 펼쳐 본 날짜. 한 번에 하나만 연다 */
   const [open, setOpen] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
-    fetch('/api/notices/calendar?weeks=4', { cache: 'no-store' })
+    fetch(`/api/notices/calendar?weeks=${weeks}`, { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('마감 일정을 불러오지 못했어요.'))))
       .then(json => {
         if (!alive) return
-        if (json.error) setError(json.error)
-        else setData(json)
+        setResult({ key: weeks, data: json.error ? null : json, error: json.error ?? null })
       })
       .catch((err: unknown) => {
-        if (alive) setError(err instanceof Error ? err.message : '마감 일정을 불러오지 못했어요.')
+        if (!alive) return
+        setResult({
+          key: weeks,
+          data: null,
+          error: err instanceof Error ? err.message : '마감 일정을 불러오지 못했어요.',
+        })
       })
     return () => {
       alive = false
     }
-  }, [])
+  }, [weeks])
 
   if (error) {
     return (
@@ -97,16 +117,39 @@ export default function DeadlineCalendar() {
     <section className="cs-wrap cs-section">
       <div className="cs-cal">
         <header className="cs-cal__head">
-          <h2 className="cs-cal__title">앞으로 4주, 접수가 끝나는 날</h2>
-          <div className="cs-cal__legend" aria-hidden="true">
-            <span className="cs-cal__key">
-              <i className="cs-cal__cell" data-kind="sale" />
-              분양
-            </span>
-            <span className="cs-cal__key">
-              <i className="cs-cal__cell" data-kind="rent" />
-              임대
-            </span>
+          <div>
+            <h2 className="cs-cal__title">앞으로 {weeks}주, 접수가 끝나는 날</h2>
+            <p className="cs-cal__sub">네모 하나가 공고 하나예요.</p>
+          </div>
+
+          <div className="cs-cal__tools">
+            <div className="cs-cal__legend">
+              <span className="cs-cal__key">
+                <i className="cs-cal__cell" data-kind="sale" />
+                분양
+              </span>
+              <span className="cs-cal__key">
+                <i className="cs-cal__cell" data-kind="rent" />
+                임대
+              </span>
+            </div>
+            <div className="cs-cal__span" role="group" aria-label="보는 기간">
+              {([2, 4] as const).map(w => (
+                <button
+                  key={w}
+                  type="button"
+                  className="cs-cal__spanbtn"
+                  data-on={weeks === w}
+                  aria-pressed={weeks === w}
+                  onClick={() => {
+                    setWeeks(w)
+                    setOpen(null)
+                  }}
+                >
+                  {w}주
+                </button>
+              ))}
+            </div>
           </div>
         </header>
 
@@ -190,11 +233,9 @@ export default function DeadlineCalendar() {
         )}
 
         <footer className="cs-cal__foot">
-          <p className="cs-note">
-            네모 하나가 공고 하나예요. 건수가 많은 날은 맨 위 숫자를 누르면 그날 목록이 열립니다.
-          </p>
+          <p className="cs-note">날짜 위 숫자를 누르면 그날 마감하는 공고 목록이 열립니다.</p>
           <p className="cs-note cs-num">
-            4주 안 마감 {data.within}건 · 그 뒤 {data.beyond}건
+            {weeks}주 안 마감 {data.within}건 · 그 뒤 {data.beyond}건
             {data.undated > 0 && ` · 마감일 미공개 ${data.undated}건`}
           </p>
         </footer>

@@ -32,6 +32,31 @@ const TABS = [
   { key: 'market', label: '부동산 시장', hint: '시세·거래·금리 흐름' },
 ]
 
+/**
+ * 주요 언론사.
+ *
+ * 구글 뉴스는 매체를 가리지 않고 모아 준다. 덕분에 작은 매체의 단독도 걸리지만,
+ * 같은 사안을 서른 곳이 받아쓴 목록이 되기도 한다. 읽는 쪽이 고를 수 있게
+ * 한 겹을 둔다 — 기본은 전체다. 걸러내는 것을 기본으로 삼으면 우리가 고른
+ * 목록을 전부인 것처럼 보이게 된다.
+ *
+ * 매체명은 구글 뉴스가 적어 주는 표기를 그대로 맞춘다.
+ */
+const MAJOR_OUTLETS = [
+  '조선일보', '중앙일보', '동아일보', '한국일보', '서울신문', '경향신문', '한겨레',
+  '국민일보', '세계일보', '문화일보',
+  '한국경제', '매일경제', '서울경제', '머니투데이', '이데일리', '파이낸셜뉴스',
+  '헤럴드경제', '아시아경제',
+  '연합뉴스', '뉴시스', '뉴스1',
+  'KBS', 'MBC', 'SBS', 'YTN', 'JTBC', 'MBN', '채널A', 'TV조선',
+]
+
+/** 표기가 조금씩 다르다 — '한국경제TV', '조선비즈' 도 같은 집안으로 본다 */
+function isMajor(source: string) {
+  const t = (source ?? '').replace(/\s/g, '')
+  return MAJOR_OUTLETS.some(m => t.includes(m.replace(/\s/g, '')))
+}
+
 /** 며칠 전인지로 적는다. 날짜만 적으면 얼마나 묵은 소식인지 셈해야 한다 */
 function ago(iso: string | null) {
   if (!iso) return '시각 미상'
@@ -81,6 +106,8 @@ function SourceMark({ logo, source, rank }: { logo: string | null; source: strin
 
 export default function NewsView() {
   const [topic, setTopic] = useState(TABS[0].key)
+  /** 전체 / 주요 언론사. 기본은 전체다 */
+  const [outlet, setOutlet] = useState<'all' | 'major'>('all')
   /** 어떤 주제의 결과인지 함께 담아, 로딩 여부를 파생값으로 계산한다 */
   const [result, setResult] = useState<{
     key: string
@@ -90,7 +117,9 @@ export default function NewsView() {
   } | null>(null)
 
   const loading = result?.key !== topic
-  const items = result?.key === topic ? result.items : []
+  const fetched = result?.key === topic ? result.items : []
+  const items = outlet === 'major' ? fetched.filter(n => isMajor(n.source)) : fetched
+  const majorCount = fetched.filter(n => isMajor(n.source)).length
   const error = result?.key === topic ? result.error : null
   const query = result?.key === topic ? result.query : ''
   const current = TABS.find(t => t.key === topic) ?? TABS[0]
@@ -134,6 +163,16 @@ export default function NewsView() {
           onChange={setTopic}
           items={TABS.map(t => ({ value: t.key, label: t.label }))}
         />
+        {/* 주제 오른쪽이 비어 있던 자리. 읽는 쪽이 매체를 고를 수 있게 둔다 */}
+        <PillChoice
+          label="언론사"
+          value={outlet}
+          onChange={v => setOutlet(v as 'all' | 'major')}
+          items={[
+            { value: 'all', label: '전체', count: fetched.length },
+            { value: 'major', label: '주요 언론사', count: majorCount },
+          ]}
+        />
       </div>
 
       {/* 고른 주제를 제목으로 한 번 더 세운다. 알약만으로는 스크롤을 내린 뒤
@@ -160,8 +199,16 @@ export default function NewsView() {
       ) : items.length === 0 ? (
         <div className="cs-vacancy" style={{ marginTop: 28 }}>
           <span className="cs-vacancy__eyebrow">기사 0건</span>
-          <p className="cs-vacancy__title">이 주제의 최근 기사를 찾지 못했습니다</p>
-          <p className="cs-vacancy__desc">다른 주제를 눌러보시거나 잠시 뒤 다시 확인해 주세요.</p>
+          <p className="cs-vacancy__title">
+            {outlet === 'major'
+              ? '주요 언론사가 쓴 기사가 아직 없습니다'
+              : '이 주제의 최근 기사를 찾지 못했습니다'}
+          </p>
+          <p className="cs-vacancy__desc">
+            {outlet === 'major'
+              ? `전체로 보시면 ${fetched.length}건이 있습니다.`
+              : '다른 주제를 눌러보시거나 잠시 뒤 다시 확인해 주세요.'}
+          </p>
         </div>
       ) : (
         <ol className="cs-news">
