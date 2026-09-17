@@ -268,8 +268,8 @@ export default function ConsumerHome() {
       {/* ── 알림 ────────────────────────────────────────── */}
       <Reveal as="section" className="cs-wrap cs-section">
         <SectionHead index="03" title="다음에도, 처음부터 찾지 않도록" />
-        <div className="cs-save">
-          <div className="cs-save__copy">
+        <div className="cs-keep">
+          <div className="cs-keep__copy">
             <p>살고 싶은 동네와 주거비를 저장해두세요.</p>
             <p>다음 방문에도 같은 조건으로 후보를 바로 확인할 수 있어요.</p>
             <p>
@@ -280,8 +280,8 @@ export default function ConsumerHome() {
 
           {/* 저장은 이 지면에서 가장 중요한 행동이다. 글자 버튼으로 두면
               문단 끝에 딸린 각주처럼 읽혀 아무도 누르지 않는다. */}
-          <Link href="/analyze" className="cs-save__cta">
-            <span className="cs-save__cta-main">
+          <Link href="/analyze" className="cs-keep__cta">
+            <span className="cs-keep__cta-main">
               내 조건 저장하기
               <svg
                 width="22"
@@ -297,7 +297,7 @@ export default function ConsumerHome() {
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </span>
-            <span className="cs-save__cta-sub">1분이면 끝나요 · 가입 없이 먼저</span>
+            <span className="cs-keep__cta-sub">1분이면 끝나요 · 가입 없이 먼저</span>
           </Link>
         </div>
       </Reveal>
