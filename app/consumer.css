@@ -3327,3 +3327,403 @@ body:has(.cs-ticker) .cs-chat {
     font-size: 18px;
   }
 }
+
+/* ═════════════════════════════════════════════════════════
+   마감 달력 — 네모 하나가 공고 하나
+   막대는 "많다"만 말한다. 네모를 쌓으면 몇 건인지 세어지고,
+   분양과 임대가 어떻게 섞였는지도 같은 그림에서 읽힌다.
+   ═════════════════════════════════════════════════════════ */
+.cs-cal {
+  padding: clamp(24px, 3vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+.cs-cal__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cs-cal__title {
+  margin: 0;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--title);
+}
+.cs-cal__legend {
+  display: flex;
+  gap: 16px;
+}
+.cs-cal__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* 스물여덟 칸. 좁아지면 가로로 밀되 날짜 축은 붙어 따라간다 */
+.cs-cal__plot {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(26px, 1fr);
+  align-items: end;
+  gap: 0;
+  margin-top: 26px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.cs-cal__col {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: end;
+  justify-items: center;
+  min-height: calc(var(--peak) * 15px + 64px);
+  padding: 0 1px;
+}
+/* 주가 바뀌는 자리에만 괘선. 매 칸에 선을 그으면 격자만 보인다 */
+.cs-cal__col[data-week-edge='true'] {
+  border-left: 1px dashed var(--line);
+}
+.cs-cal__col[data-today='true'] {
+  background: linear-gradient(180deg, var(--accent-soft), transparent 78%);
+  border-radius: 8px 8px 0 0;
+}
+
+.cs-cal__stack {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  align-content: end;
+  padding-bottom: 10px;
+}
+/* 채운 네모가 분양, 빈 네모가 임대. 임대가 상시로 많아 지면이 어두워지지
+   않도록 흔한 쪽을 비운다 */
+.cs-cal__cell {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1.5px solid var(--title);
+}
+.cs-cal__cell[data-kind='sale'] {
+  background: var(--title);
+}
+.cs-cal__cell[data-kind='rent'] {
+  background: transparent;
+}
+.cs-cal__over {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+/* 건수는 주묵으로 한 번 찍는다 — 누를 수 있다는 표시도 겸한다 */
+.cs-cal__count {
+  margin-bottom: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cs-cal__count:hover {
+  color: var(--brand);
+}
+
+.cs-cal__axis {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1.5px solid var(--line-ink);
+  width: 100%;
+}
+.cs-cal__d {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--title);
+  font-variant-numeric: tabular-nums;
+}
+.cs-cal__w {
+  font-size: 11px;
+  color: var(--muted);
+}
+.cs-cal__col[data-weekend='true'] .cs-cal__w,
+.cs-cal__col[data-weekend='true'] .cs-cal__d {
+  color: color-mix(in srgb, var(--muted) 62%, transparent);
+}
+.cs-cal__today {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--paper);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 그날 목록 — 그림 아래에서 펼쳐진다 */
+.cs-cal__list {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.cs-cal__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 17px;
+  color: var(--title);
+}
+.cs-cal__list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.cs-cal__list a {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+}
+.cs-cal__list a:hover .cs-cal__name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cs-cal__tag {
+  padding: 3px 0;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--title);
+}
+.cs-cal__tag[data-kind='sale'] {
+  background: var(--title);
+  color: var(--paper);
+}
+.cs-cal__tag[data-kind='rent'] {
+  color: var(--title);
+}
+.cs-cal__name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--title);
+}
+.cs-cal__meta {
+  grid-column: 2;
+  font-size: 14px;
+  color: var(--muted);
+}
+.cs-cal__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+  .cs-cal__plot {
+    grid-auto-columns: 30px;
+  }
+  .cs-cal__legend {
+    width: 100%;
+  }
+}
+
+/* FAQ 답변 — 문단이 여럿이면 사이를 벌려 생각이 바뀌는 자리를 보이게 한다 */
+.cs-faq__a p {
+  margin: 0;
+}
+.cs-faq__a p + p {
+  margin-top: 0.9em;
+}
+
+/* ═════════════════════════════════════════════════════════
+   지도로 보는 공고
+   네이버 기본 핀 대신 지면의 글자꼴로 만든 표를 쓴다. 핀은 위치만
+   말하지만, 남은 날을 얹은 표는 어디가 급한지까지 한 번에 말한다.
+   ═════════════════════════════════════════════════════════ */
+.cs-map__bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.cs-map__legend {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 4px;
+}
+.cs-map__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.cs-map {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.85fr);
+  gap: 18px;
+  align-items: stretch;
+}
+.cs-map__canvas {
+  height: clamp(420px, 56vh, 620px);
+  border: 1px solid var(--line-ink);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--paper-2);
+}
+.cs-map__side {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+.cs-map__side-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--line-ink);
+  font-size: 17px;
+  color: var(--title);
+}
+.cs-map__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+.cs-map__list a {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  transition: background 0.16s var(--ease);
+}
+.cs-map__list li[data-hover='true'] a,
+.cs-map__list a:hover {
+  background: var(--paper);
+}
+.cs-map__dday {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* 이 지면에서 붉은 것은 늘 마감이다 */
+.cs-map__dday[data-urgent='true'] {
+  color: var(--accent);
+}
+.cs-map__name {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--title);
+}
+.cs-map__meta {
+  grid-column: 2;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ── 지도 위 표시 ─────────────────────────────────────── */
+.cs-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--title);
+  background: var(--title);
+  color: var(--paper);
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px -3px rgba(16, 24, 40, 0.45);
+  cursor: pointer;
+}
+/* 임대는 상시로 많다. 채우면 지도가 새까매지므로 흔한 쪽을 비운다 */
+.cs-pin--rent {
+  background: var(--surface);
+  color: var(--title);
+}
+/* 마감 임박만 주묵 */
+.cs-pin--urgent {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--paper);
+}
+.cs-pin--rent.cs-pin--urgent {
+  background: var(--surface);
+  color: var(--accent);
+}
+/* 주소가 없어 지역 기준으로 찍은 점 — 테두리를 끊어 '대략'임을 드러낸다.
+   정확한 점과 같은 모양으로 두면 둘을 구분할 방법이 없다. */
+.cs-pin--approx {
+  border-style: dashed;
+}
+.cs-pin--chip {
+  min-width: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .cs-map {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-map__canvas {
+    height: 380px;
+  }
+  .cs-map__side {
+    max-height: 420px;
+  }
+}

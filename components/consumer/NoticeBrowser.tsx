@@ -7,6 +7,7 @@ import type { Property } from '@/lib/crm/types'
 import NoticeCard from './NoticeCard'
 import FilterRow, { type FilterOption } from './FilterRow'
 import SampleOnlyNotice from './SampleOnlyNotice'
+import NoticeMap from './NoticeMap'
 
 interface Row {
   property: Property
@@ -154,6 +155,8 @@ export default function NoticeBrowser() {
           </div>
         </>
       )}
+
+      <NoticeMap />
 
       {officialCount > 0 && (
         <p className="cs-note" style={{ marginTop: 24 }}>

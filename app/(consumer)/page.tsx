@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import HomeNoticeStrip from '@/components/consumer/HomeNoticeStrip'
 import DeadlineTicker from '@/components/consumer/DeadlineTicker'
+import DeadlineCalendar from '@/components/consumer/DeadlineCalendar'
 import Reveal from '@/components/consumer/Reveal'
 
 const STEPS = [
@@ -18,26 +19,49 @@ const STEPS = [
   },
 ]
 
-const FAQ = [
+/**
+ * 자주 묻는 것.
+ *
+ * 답을 한 덩어리로 붙여두면 세 문장이 한 문장처럼 읽힌다. 묻는 것이 하나여도
+ * 답에는 결론과 단서와 예외가 섞여 있으므로, 생각이 바뀌는 자리에서 끊는다.
+ */
+const FAQ: { q: string; a: string[] }[] = [
   {
     q: '관심조건을 저장하면 무엇이 달라지나요?',
-    a: '다음 방문에 같은 조건으로 후보를 바로 보여드립니다. 알림에 동의하시면 그 자리에서 조건에 맞는 공고를 메일로 한 통 보내드리고, 이후 새 공고가 열릴 때마다 이어서 알려드려요. 가입 없이도 조건 입력과 후보 확인은 전부 가능합니다.',
+    a: [
+      '다음 방문에 같은 조건으로 후보를 바로 보여드립니다.',
+      '알림에 동의하시면 그 자리에서 조건에 맞는 공고를 메일로 한 통 보내드리고, 이후 새 공고가 열릴 때마다 이어서 알려드려요.',
+      '가입 없이도 조건 입력과 후보 확인은 전부 가능합니다.',
+    ],
   },
   {
     q: '알림 메일에는 무엇이 담기나요?',
-    a: '공고 이름과 지역, 보증금과 월 임대료, 접수 마감일, 그리고 왜 추천했는지를 한 통에 정리해 보내드립니다. 조건에 맞는 공고가 없으면 없다고 적어 보냅니다 — 빈 자리를 예시로 메우지 않습니다. 수신은 관심공고에서 언제든 해제할 수 있어요.',
+    a: [
+      '공고 이름과 지역, 보증금과 월 임대료, 접수 마감일, 그리고 왜 추천했는지를 한 통에 정리해 보내드립니다.',
+      '조건에 맞는 공고가 없으면 없다고 적어 보냅니다 — 빈 자리를 예시로 메우지 않습니다.',
+      '수신은 관심공고에서 언제든 해제할 수 있어요.',
+    ],
   },
   {
     q: '지금 보이는 공고는 실제 공고인가요?',
-    a: '네. 공공데이터포털 청약홈 OpenAPI와 LH 청약플러스에서 모은 실제 모집공고만 보여드립니다. 화면 구성을 위해 쓰던 예시 공고는 전부 걷어냈습니다. 접수 중인 공고가 없을 때는 비어 있다는 사실을 그대로 적습니다.',
+    a: [
+      '네. 공공데이터포털 청약홈 OpenAPI와 LH 청약플러스에서 모은 실제 모집공고만 보여드립니다.',
+      '화면 구성을 위해 쓰던 예시 공고는 전부 걷어냈습니다. 접수 중인 공고가 없을 때는 비어 있다는 사실을 그대로 적습니다.',
+    ],
   },
   {
     q: '조건에 딱 맞지 않는 공고도 보여주나요?',
-    a: '예산이나 면적을 조금 벗어난 공고는 아래 참고 후보로 따로 모읍니다. 상한을 얼마나 넘는지 카드마다 적어두니, 조건을 넓혀볼지는 직접 정하시면 됩니다.',
+    a: [
+      '예산이나 면적을 조금 벗어난 공고는 아래 참고 후보로 따로 모읍니다.',
+      '상한을 얼마나 넘는지 카드마다 적어두니, 조건을 넓혀볼지는 직접 정하시면 됩니다.',
+    ],
   },
   {
     q: '여기서 추천받으면 자격이 확인된 건가요?',
-    a: '아닙니다. 지역·주거비·면적처럼 희망 조건이 맞는지만 비교해 드립니다. 소득·자산·거주기간 등 자격요건 체크 요망 — 지원 전 반드시 공식 모집공고문을 읽어주세요.',
+    a: [
+      '아닙니다. 지역·주거비·면적처럼 희망 조건이 맞는지만 비교해 드립니다.',
+      '소득·자산·거주기간 등 자격요건 체크 요망 — 지원 전 반드시 공식 모집공고문을 읽어주세요.',
+    ],
   },
 ]
 
@@ -188,6 +212,9 @@ export default function ConsumerHome() {
       {/* ── 지금 살펴볼 공고 ────────────────────────────── */}
       <HomeNoticeStrip />
 
+      {/* ── 마감이 언제 몰리는지 ────────────────────────── */}
+      <DeadlineCalendar />
+
       {/* ── 준비 순서 ───────────────────────────────────── */}
       <Reveal as="section" className="cs-wrap cs-section">
         <SectionHead
@@ -260,10 +287,18 @@ export default function ConsumerHome() {
           {FAQ.map(f => (
             <details key={f.q} className="cs-faq__item">
               <summary className="cs-faq__q">{f.q}</summary>
-              <p className="cs-faq__a">
-                <span className="cs-faq__mark" aria-hidden="true">A.</span>
-                {f.a}
-              </p>
+              <div className="cs-faq__a">
+                {f.a.map((para, i) => (
+                  <p key={para}>
+                    {i === 0 && (
+                      <span className="cs-faq__mark" aria-hidden="true">
+                        A.
+                      </span>
+                    )}
+                    {para}
+                  </p>
+                ))}
+              </div>
             </details>
           ))}
         </div>
