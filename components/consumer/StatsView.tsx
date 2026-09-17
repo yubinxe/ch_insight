@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { PillChoice } from './Choose'
 
 /**
  * 경쟁률 · 신청자 · 당첨 통계.
@@ -159,22 +160,15 @@ export default function StatsView() {
           갈렸는지 그대로 옮겨 드려요.
         </p>
 
-        <div className="cs-field" style={{ marginTop: 24, maxWidth: 280 }}>
-          <label className="cs-field__label" htmlFor="stats-month">
-            기준 월
-          </label>
-          <select
-            id="stats-month"
-            className="cs-input"
+        {/* 열두 달을 접어두면 고르는 데 두 번 누른다. 펼쳐 두고 가로로 민다 */}
+        <div style={{ marginTop: 26 }}>
+          <PillChoice
+            label="기준 월"
+            scroll
             value={month}
-            onChange={e => setMonth(e.target.value)}
-          >
-            {months.map(m => (
-              <option key={m} value={m}>
-                {monthLabel(m)}
-              </option>
-            ))}
-          </select>
+            onChange={setMonth}
+            items={months.map(m => ({ value: m, label: monthLabel(m) }))}
+          />
         </div>
       </header>
 

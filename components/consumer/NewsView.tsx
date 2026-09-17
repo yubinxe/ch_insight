@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { PillChoice } from './Choose'
 
 /**
  * 청약뉴스.
@@ -92,22 +93,15 @@ export default function NewsView() {
         </p>
       </header>
 
-      <div className="cs-newstabs" role="tablist" aria-label="뉴스 주제">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            type="button"
-            role="tab"
-            aria-selected={topic === t.key}
-            className="cs-newstab"
-            data-on={topic === t.key}
-            onClick={() => setTopic(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div style={{ marginTop: 28 }}>
+        <PillChoice
+          label="주제"
+          value={topic}
+          onChange={setTopic}
+          items={TABS.map(t => ({ value: t.key, label: t.label }))}
+        />
       </div>
-      <p className="cs-note" style={{ marginTop: 12 }}>
+      <p className="cs-note" style={{ marginTop: 14 }}>
         {current.hint}
         {query && ` · 검색어: ${query}`}
       </p>

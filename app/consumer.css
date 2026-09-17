@@ -2931,3 +2931,230 @@ body:has(.cs-ticker) .cs-chat {
     font-size: 17px;
   }
 }
+
+/* ═════════════════════════════════════════════════════════
+   고르는 자리 — 지면 안으로 들인 선택 UI
+   운영체제가 그리는 위젯은 지면과 따로 논다. 테두리·화살표·상태를
+   전부 직접 그려 먹과 한지의 문법으로 맞춘다.
+   ═════════════════════════════════════════════════════════ */
+.cs-choose {
+  display: grid;
+  gap: 12px;
+}
+.cs-choose__label {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+.cs-choose__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ── 알약 줄 ─────────────────────────────────────────── */
+.cs-choose__rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* 12개월처럼 긴 줄은 감싸지 않고 민다. 끝이 흐려져 더 있다는 걸 알린다 */
+.cs-choose__rail--scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+}
+.cs-choose__rail--scroll::-webkit-scrollbar {
+  display: none;
+}
+.cs-choose__rail--scroll > .cs-pill {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+}
+
+.cs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 17px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--body);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease),
+    border-color 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.cs-pill:hover {
+  border-color: var(--line-ink);
+  transform: translateY(-1px);
+}
+.cs-pill:active {
+  transform: translateY(0);
+}
+.cs-pill:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.cs-pill[data-on='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--paper);
+}
+/* 건수는 라벨에 딸린 값이다. 같은 무게로 두면 두 개를 읽게 된다 */
+.cs-pill__n {
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.cs-pill[data-on='true'] .cs-pill__n {
+  color: color-mix(in srgb, var(--paper) 68%, transparent);
+}
+
+/* ── 접히는 고르개 ───────────────────────────────────── */
+.cs-select {
+  position: relative;
+  display: block;
+}
+.cs-select__field {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 46px 0 18px;
+  border: 1px solid var(--line-ink);
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--title);
+  cursor: pointer;
+  transition: box-shadow 0.18s var(--ease), background 0.18s var(--ease);
+}
+.cs-select__field:hover {
+  background: var(--paper);
+}
+.cs-select__field:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+/* 화살표는 지면의 획으로 그린다 — 시스템 삼각형은 다른 서체처럼 튄다 */
+.cs-select__caret {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: var(--title);
+  pointer-events: none;
+  transition: transform 0.18s var(--ease);
+}
+.cs-select:has(.cs-select__field:focus) .cs-select__caret {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* ── 격자 고르개 ─────────────────────────────────────── */
+.cs-choose__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+.cs-gridpick {
+  padding: 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-inner);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--body);
+  cursor: pointer;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease),
+    border-color 0.18s var(--ease);
+}
+.cs-gridpick:hover {
+  border-color: var(--line-ink);
+  background: var(--paper);
+}
+.cs-gridpick:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.cs-gridpick[data-on='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--paper);
+}
+
+/* 기존 칩·뉴스탭도 같은 알약 문법으로 맞춘다 */
+.cs-newstab {
+  padding: 10px 17px;
+  font-size: 15px;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease),
+    border-color 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.cs-newstab:hover {
+  transform: translateY(-1px);
+}
+.cs-newstab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ═════════════════════════════════════════════════════════
+   본문 단락 리듬
+   행간 1.6 에 문단 간격 16px 이면 줄 사이와 문단 사이가 거의 같아
+   어디서 한 생각이 끝났는지 보이지 않는다. 행간을 넓히고 문단
+   간격을 그보다 확실히 크게 벌린다.
+   ═════════════════════════════════════════════════════════ */
+.cs-main p {
+  line-height: 1.78;
+}
+.cs-main p + p {
+  margin-top: 1.35em;
+}
+.cs-card p + p,
+.cs-faq__a {
+  margin-top: 1.1em;
+}
+.cs-main li {
+  line-height: 1.75;
+}
+.cs-main li + li {
+  margin-top: 0.5em;
+}
+/* 짧은 보조문은 그대로 둔다 — 넓히면 오히려 본문처럼 읽힌다 */
+.cs-main .cs-note {
+  line-height: 1.6;
+}
+
+/* 공고 찾기의 지역·유형 칩도 같은 알약 문법으로 맞춘다 */
+.cs-chip {
+  transition: background 0.18s var(--ease), color 0.18s var(--ease),
+    border-color 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.cs-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-ink);
+}
+.cs-chip:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.cs-filter__label {
+  font-family: var(--font-brand), var(--font-sans);
+  letter-spacing: 0.07em;
+}

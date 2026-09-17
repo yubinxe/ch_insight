@@ -8,6 +8,7 @@ import {
   type ReferenceStats,
   type ScoreComparison,
 } from '@/lib/subscription-score'
+import { GridChoice } from './Choose'
 import { useConsumer } from './ConsumerProvider'
 
 /**
@@ -219,23 +220,14 @@ export default function ScoreCalculator() {
           </div>
 
           <div className="cs-card cs-score__compare">
-            <div className="cs-field">
-              <label className="cs-field__label" htmlFor="score-region">
-                비교할 지역
-              </label>
-              <select
-                id="score-region"
-                className="cs-input"
-                value={region}
-                onChange={e => setRegion(e.target.value)}
-              >
-                {REGIONS.map(r => (
-                  <option key={r.code || 'all'} value={r.code}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* 열일곱 개 시·도는 목록보다 지도에 가깝다. 한 화면에 펼쳐
+                어디가 비었는지도 함께 보이게 한다 */}
+            <GridChoice
+              label="비교할 지역"
+              value={region}
+              onChange={setRegion}
+              items={REGIONS.map(r => ({ value: r.code, label: r.name }))}
+            />
 
             {refLoading ? (
               <div className="cs-skel" style={{ height: 120, marginTop: 18 }} />

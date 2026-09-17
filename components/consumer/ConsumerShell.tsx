@@ -9,9 +9,10 @@ const NAV = [
   { href: '/notices', label: '공고 찾기' },
   { href: '/guide', label: '청약 가이드' },
   { href: '/saved', label: '관심공고' },
-  { href: '/news', label: '청약뉴스' },
   { href: '/score', label: '가점 계산' },
   { href: '/stats', label: '경쟁률·통계' },
+  // 뉴스는 읽고 나가는 자리다. 공고·조건·통계를 먼저 세우고 맨 끝에 둔다.
+  { href: '/news', label: '청약뉴스' },
 ]
 
 export default function ConsumerShell({ children }: { children: ReactNode }) {
