@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardHead } from '@/components/ui'
+import SupplyPanel from './SupplyPanel'
 import { Chip, DemoFlag, Empty, ErrorBox, PageHead, Person, Spinner, Stat, TableSkeleton } from './primitives'
 
 interface Snapshot {
@@ -231,7 +232,11 @@ export default function CrmDashboard() {
         </div>
       )}
 
-      <div className="crm-stat-grid">
+      {/* 팔 물건이 먼저다. 공고 수집이 깨지면 고객 지표는 한참 뒤에야 떨어지고,
+          그때는 이미 사람들이 빈 화면을 본 뒤다. */}
+      <SupplyPanel />
+
+      <div className="crm-stat-grid" style={{ marginTop: 'var(--s6, 32px)' }}>
         <Stat label="등록 고객" value={m.customers ?? 0} unit="명" hint="조건이 저장된 고객" />
         <Stat
           label="관리 기회"
