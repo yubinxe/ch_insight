@@ -198,20 +198,24 @@ export default function NoticeMap() {
     const kakao = w.kakao
     const map = mapRef.current
 
-    // 표시를 그리다 나는 예외가 페이지를 통째로 내려앉히는 일을 겪었다.
-    // 지도는 거들 뿐이고 목록이 본체다. 그리기가 실패해도 지면은 남아야 한다.
-    try {
-      overlaysRef.current.forEach(o => o.setMap(null))
-    } catch {
-      /* 이전 표시를 못 지워도 새로 그리는 데는 지장이 없다 */
-    }
+    overlaysRef.current.forEach(o => {
+      try {
+        o.setMap(null)
+      } catch {
+        /* 이미 떨어져 나간 표시 */
+      }
+    })
     overlaysRef.current = []
 
+    // 표시는 HTML 문자열로 넘긴다. DOM 요소를 넘기면 React 가 다시 그릴 때
+    // 그 요소가 바뀌어 지도 위에서 사라지는 일이 생긴다. 실패를 조용히
+    // 삼키지 않고 한 번만 모아서 화면에 알린다 — 지난번에 표시가 하나도
+    // 안 뜨는데 아무 말도 없어 원인을 찾는 데 오래 걸렸다.
+    let failed = 0
     data.pins.forEach(pin => {
       const urgent = pin.daysLeft !== null && pin.daysLeft <= 3
       const approx = pin.coordSource !== 'GEOCODED'
-      const el = document.createElement('a')
-      el.className = [
+      const cls = [
         'cs-pin',
         `cs-pin--${pin.kind.toLowerCase()}`,
         urgent ? 'cs-pin--urgent' : '',
@@ -219,31 +223,33 @@ export default function NoticeMap() {
       ]
         .filter(Boolean)
         .join(' ')
-      el.href = `/notices/${pin.id}`
-      el.title = `${pin.name} · ${pin.province}`
-      el.textContent = dday(pin.daysLeft)
-      el.addEventListener('mouseenter', () => setHovered(pin.id))
-      el.addEventListener('mouseleave', () => setHovered(null))
+      const label = dday(pin.daysLeft)
+      const title = `${pin.name} · ${pin.province}`.replace(/"/g, '&quot;')
 
       try {
-        overlaysRef.current.push(
-          new kakao.maps.CustomOverlay({
-            map,
-            position: new kakao.maps.LatLng(pin.lat, pin.lng),
-            content: el,
-            yAnchor: 0.5,
-            xAnchor: 0.5,
-            clickable: true,
-          }),
-        )
+        const ov = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(pin.lat, pin.lng),
+          content: `<a class="${cls}" href="/notices/${pin.id}" title="${title}">${label}</a>`,
+          yAnchor: 0.5,
+          xAnchor: 0.5,
+          clickable: true,
+          zIndex: urgent ? 3 : pin.kind === 'SALE' ? 2 : 1,
+        })
+        ov.setMap(map)
+        overlaysRef.current.push(ov)
       } catch {
-        /* 한 건이 틀려도 나머지는 올라간다 */
+        failed++
       }
     })
+    if (failed > 0 && failed === data.pins.length) {
+      // 효과 안에서 곧바로 상태를 바꾸면 그리기가 한 번 더 돈다. 한 박자 뒤로 미룬다.
+      queueMicrotask(() => setError('지도에 공고를 표시하지 못했습니다. 잠시 뒤 새로고침해 주세요.'))
+    }
 
     // 지도를 움직이면 옆 목록이 따라온다. 보이는 것과 읽는 것을 어긋나게 두지 않는다.
     const sync = () => {
       const b = map.getBounds()
+      if (!b) return
       const sw = b.getSouthWest()
       const ne = b.getNorthEast()
       const inView = data.pins.filter(
@@ -256,20 +262,25 @@ export default function NoticeMap() {
       inView.sort((a, z) => (a.daysLeft ?? 9999) - (z.daysLeft ?? 9999))
       setVisible(inView)
     }
-    try {
-      sync()
-      kakao.maps.event.addListener(map, 'idle', sync)
-    } catch {
-      /* 범위를 못 따라가도 표시는 이미 올라가 있다 */
-    }
+    sync()
+    // 지도가 자리를 잡기 전에 한 번 더 — 처음 그릴 때 bounds 가 아직 0 인 순간이 있다
+    const settle = setTimeout(sync, 400)
+    kakao.maps.event.addListener(map, 'idle', sync)
 
     return () => {
+      clearTimeout(settle)
       try {
         kakao.maps.event.removeListener(map, 'idle', sync)
-        overlaysRef.current.forEach(o => o.setMap(null))
       } catch {
         /* 떠나는 길에 난 예외로 다음 화면을 망치지 않는다 */
       }
+      overlaysRef.current.forEach(o => {
+        try {
+          o.setMap(null)
+        } catch {
+          /* 같은 이유 */
+        }
+      })
       overlaysRef.current = []
     }
   }, [ready, data])
@@ -332,13 +343,13 @@ export default function NoticeMap() {
           ) : (
             <ul className="cs-map__list">
               {visible.map(p => (
-                <li key={p.id} data-hover={hovered === p.id}>
+                <li key={p.id} data-hover={hovered === p.id} data-kind={p.kind.toLowerCase()}>
                   <Link
                     href={`/notices/${p.id}`}
                     onMouseEnter={() => setHovered(p.id)}
                     onMouseLeave={() => setHovered(null)}
                   >
-                    <span className="cs-map__dday" data-urgent={p.daysLeft !== null && p.daysLeft <= 3}>
+                    <span className="cs-map__dday">
                       {dday(p.daysLeft)}
                     </span>
                     <span className="cs-map__name">{p.name}</span>

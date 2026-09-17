@@ -4039,3 +4039,172 @@ a.cs-pin {
     max-width: 17em;
   }
 }
+
+/* ═════════════════════════════════════════════════════════
+   지도 표시 — 분양은 주묵(붉은), 임대는 쪽빛(푸른)
+   달력과 같은 두 색을 쓴다. 한 서비스 안에서 분양·임대의 색이 화면마다
+   다르면, 색이 뜻을 잃고 장식이 된다.
+
+   표시는 지도 위에 얹히므로 배경이 무엇이든 읽혀야 한다. 흰 테두리를 둘러
+   지도의 도로·녹지 위에서도 글자가 뜨게 한다.
+   ═════════════════════════════════════════════════════════ */
+.cs-pin {
+  min-width: 58px;
+  height: 30px;
+  padding: 0 12px;
+  border: 2px solid #FFFFFF;
+  border-radius: 999px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 8px -1px rgba(16, 24, 40, 0.5);
+}
+/* 분양 — 붉은 */
+.cs-pin--sale {
+  background: var(--cal-sale);
+  color: #FFFFFF;
+}
+/* 임대 — 푸른 */
+.cs-pin--rent {
+  background: var(--cal-rent);
+  color: #FFFFFF;
+}
+/* 마감 임박은 같은 색을 더 진하게 눌러 무게만 올린다 — 색을 하나 더 쓰면
+   분양·임대의 구분이 흐려진다 */
+.cs-pin--urgent {
+  border-color: #FFFFFF;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cal-sale) 55%, transparent),
+    0 3px 10px -2px rgba(16, 24, 40, 0.55);
+}
+.cs-pin--sale.cs-pin--urgent {
+  background: color-mix(in srgb, var(--cal-sale) 88%, #000);
+}
+.cs-pin--rent.cs-pin--urgent {
+  background: color-mix(in srgb, var(--cal-rent) 88%, #000);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cal-rent) 55%, transparent),
+    0 3px 10px -2px rgba(16, 24, 40, 0.55);
+}
+/* 주소가 없어 지역 기준으로 찍은 점 — 색은 그대로 두고 테두리를 끊어
+   '대략'임을 드러낸다. 색을 바꾸면 분양·임대를 못 읽게 된다 */
+.cs-pin--approx {
+  border-style: dashed;
+  opacity: 0.88;
+}
+a.cs-pin:hover {
+  filter: brightness(1.08);
+  z-index: 10;
+}
+/* 범례 칩 */
+.cs-pin--chip {
+  min-width: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-width: 1.5px;
+  box-shadow: none;
+}
+
+/* 옆 목록의 D-day 도 같은 두 색으로 맞춘다 */
+.cs-map__dday {
+  font-size: 15px;
+  font-weight: 700;
+}
+.cs-map__list li[data-kind='sale'] .cs-map__dday {
+  color: var(--cal-sale);
+}
+.cs-map__list li[data-kind='rent'] .cs-map__dday {
+  color: var(--cal-rent);
+}
+
+/* ═════════════════════════════════════════════════════════
+   03 조건 저장 — 설명과 행동을 나란히
+   설명 아래에 글자 버튼을 두면 문단의 각주처럼 읽혀 아무도 누르지 않는다.
+   본문을 키워 읽히게 하고, 버튼은 먹으로 채워 지면에서 가장 무거운 것으로 만든다.
+   ═════════════════════════════════════════════════════════ */
+.cs-save {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: center;
+}
+.cs-save__copy p {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.72;
+  font-weight: 500;
+  color: var(--title);
+  max-width: 30ch;
+}
+.cs-save__copy p + p {
+  margin-top: 1.1em;
+}
+/* 마지막 문단은 조건이 붙는 설명이라 한 단 낮춘다 */
+.cs-save__copy p:last-child {
+  font-size: 19px;
+  font-weight: 400;
+  color: var(--body);
+  max-width: 34ch;
+}
+
+.cs-save__cta {
+  display: grid;
+  gap: 8px;
+  padding: 30px 32px;
+  border-radius: var(--r-card);
+  background: var(--brand);
+  color: var(--paper);
+  text-decoration: none;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  box-shadow: 0 10px 26px -14px rgba(16, 24, 40, 0.7);
+}
+.cs-save__cta:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 34px -16px rgba(16, 24, 40, 0.8);
+}
+.cs-save__cta:active {
+  transform: translateY(-1px);
+}
+.cs-save__cta-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-family: var(--font-brand), var(--font-sans);
+  font-size: clamp(20px, 2.1vw, 25px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+/* 화살표가 눌리는 방향을 미리 보여준다 */
+.cs-save__cta:hover .cs-save__cta-main svg {
+  transform: translateX(4px);
+}
+.cs-save__cta-main svg {
+  flex-shrink: 0;
+  transition: transform 0.2s var(--ease);
+}
+.cs-save__cta-sub {
+  font-size: 15px;
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+@media (max-width: 900px) {
+  .cs-save {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+  .cs-save__copy p {
+    font-size: 20px;
+  }
+}
+
+/* 섹션 번호와 제목은 같은 무게로 선다 — 번호만 굵으면 제목이 딸린 설명처럼
+   읽힌다. 01·02·03 과 그 옆 제목을 한 덩어리로 본다. */
+.cs-section-title,
+.cs-page-title {
+  font-weight: 700;
+}
+.cs-sec-index {
+  font-weight: 700;
+}
