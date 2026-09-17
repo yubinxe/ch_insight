@@ -244,7 +244,9 @@ function WizardForm({ initial }: { initial: SearchProfile | null }) {
                 {regionList.map(r => {
                   const idx = regions.indexOf(r.name)
                   const on = idx >= 0
-                  const n = counts?.[r.name]
+                  // 건수를 받아온 뒤라면 표에 없는 지역은 0 건이다. `counts?.[name]` 로
+                  // 두면 0 건이 "아직 안 받아옴"과 구별되지 않아 힌트가 나온다.
+                  const n = counts ? (counts[r.name] ?? 0) : undefined
                   return (
                     <button
                       key={r.name}
