@@ -38,6 +38,7 @@
 - README 의 Vercel 연결 저장소명(`yubinxe/260601_dashboard`)과 `.cursor/rules/post-work-deploy.mdc`(main 직접 푸시 지침)가 현재 이름·작업 규칙과 맞지 않는다.
 - `npm run lint` 기존 오류 63건(`components/announcements`, `components/competition`, `components/hotmap` 등).
 - 이 저장소에 연결된 Vercel 프로젝트·운영 URL: 확인 필요.
+- 열린 이슈 #3 "청약가점·예치금 정적 reference dataset 연계"(2026-10-02 등록) — 내용·담당 저장소 확인 필요.
 
 ## 열린 PR
 
@@ -45,7 +46,7 @@
 |---|--------|------|-----------|
 | 1 | `feat/housing-opportunity-crm` → `main` | Housing Opportunity CRM 전환 — 기회 탐지부터 지원관리까지 (57커밋) | Open · 리뷰 결정 없음 |
 | 2 | `claude/jibcatch-presentation-scenario-ppt-ynlm1c` → `main` | 집캐치 IR 덱·발표 시나리오 + 사이트 PC 조판 패치 (문서 전용) | Draft · 리뷰 결정 없음 |
-| - | `chore/cloud-continuity` → `main` | 클라우드 작업 연속성: CLAUDE.md · WORKLOG · 세션 훅 | Open · 검토 대기 |
+| 4 | `chore/cloud-continuity` → `main` | 클라우드 작업 연속성: CLAUDE.md · WORKLOG · 세션 훅 | Open · 검토 대기 |
 
 ## 다음 행동
 
