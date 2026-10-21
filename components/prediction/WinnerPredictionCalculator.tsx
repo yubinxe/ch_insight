@@ -2,19 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Card } from '@/components/ui'
-import RadialGauge from '@/components/prediction/RadialGauge'
 import { usePredictAutoAdvance } from '@/components/prediction/usePredictAutoAdvance'
 import {
-  buildPrediction,
+  buildComparison,
   calculateSubscriptionScore,
   clampAccountYears,
   clampDependents,
   clampHomelessYears,
-  DEFAULT_REFERENCE,
   SCORE_LIMITS,
   type ReferenceStats,
   type ScoreInput,
-  type PredictionResult,
+  type ScoreComparison,
 } from '@/lib/subscription-score'
 
 const STEPS = [
@@ -52,42 +50,44 @@ export default function WinnerPredictionCalculator({
 }: Props) {
   const [step, setStep] = useState(0)
   const [input, setInput] = useState<ScoreInput>({ homelessYears: 5, dependents: 2, accountYears: 7 })
-  const [region, setRegion] = useState(regionCode)
-  const [reference, setReference] = useState<ReferenceStats>(DEFAULT_REFERENCE)
-  const [refLoading, setRefLoading] = useState(true)
-  const [result, setResult] = useState<PredictionResult | null>(null)
+  /**
+   * 지역은 prop 이 우선이고, prop 이 없을 때만 사용자가 고른 값을 쓴다.
+   * prop 을 state 로 복사해 effect 에서 동기화하지 않는다 (연쇄 렌더 방지).
+   */
+  const [pickedRegion, setPickedRegion] = useState('')
+  const region = regionCode || pickedRegion
+  const setRegion = setPickedRegion
+
+  /** 어떤 지역의 통계인지 함께 담아 로딩 여부를 파생값으로 계산한다 */
+  const [refState, setRefState] = useState<{ key: string; stats: ReferenceStats | null } | null>(null)
+  const refLoading = refState?.key !== region
+  const reference = refState?.key === region ? refState.stats : null
+
+  const [result, setResult] = useState<ScoreComparison | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [quickHint, setQuickHint] = useState('')
 
-  const loadReference = useCallback(async (code: string) => {
-    setRefLoading(true)
-    try {
-      const res = await fetch(`/api/prediction/reference?region=${encodeURIComponent(code)}`)
-      const data = await res.json()
-      setReference({
-        avg: data.avg,
-        min: data.min,
-        max: data.max,
-        median: data.median,
-        regionName: regionName || data.regionName,
-        statMonth: data.statMonth,
-        sampleCount: data.sampleCount,
+  useEffect(() => {
+    let alive = true
+    fetch(`/api/prediction/reference?region=${encodeURIComponent(region)}`)
+      .then(res => res.json())
+      .then((data: { stats: ReferenceStats | null; regionName?: string }) => {
+        if (!alive) return
+        // 통계가 없으면 기본값으로 채우지 않고 null 로 둔다.
+        setRefState({
+          key: region,
+          stats: data.stats
+            ? { ...data.stats, regionName: regionName || data.stats.regionName || data.regionName || '' }
+            : null,
+        })
       })
-    } catch {
-      setReference({ ...DEFAULT_REFERENCE, regionName: regionName || '전국' })
-    } finally {
-      setRefLoading(false)
+      .catch(() => {
+        if (alive) setRefState({ key: region, stats: null })
+      })
+    return () => {
+      alive = false
     }
-  }, [regionName])
-
-  useEffect(() => {
-    setRegion(regionCode)
-    loadReference(regionCode)
-  }, [regionCode, loadReference])
-
-  useEffect(() => {
-    if (!regionCode) loadReference(region)
-  }, [region, regionCode, loadReference])
+  }, [region, regionName])
 
   const breakdown = calculateSubscriptionScore(input)
   const isLastStep = step === STEPS.length - 1
@@ -96,7 +96,7 @@ export default function WinnerPredictionCalculator({
   const runAnalysis = useCallback(() => {
     setCalculating(true)
     requestAnimationFrame(() => {
-      const pred = buildPrediction(input, reference, complexName)
+      const pred = buildComparison(input, reference, complexName)
       setResult(pred)
       setCalculating(false)
     })
@@ -191,7 +191,7 @@ export default function WinnerPredictionCalculator({
       setInput(p => {
         const merged = { ...p, accountYears: next }
         requestAnimationFrame(() => {
-          setResult(buildPrediction(merged, reference, complexName))
+          setResult(buildComparison(merged, reference, complexName))
         })
         return merged
       })
@@ -222,7 +222,7 @@ export default function WinnerPredictionCalculator({
       {!compact && (
         <div className="predict-hero rise">
           <span className="predict-badge">AI Prediction</span>
-          <h2 className="predict-title">당첨 확률 계산기</h2>
+          <h2 className="predict-title">내 가점 비교</h2>
           <p className="predict-desc">
             청약홈 당첨자 가점 통계를 바탕으로, 입력하신 조건의 예상 당첨 가능성을 분석합니다.
             {complexName && (
@@ -492,29 +492,32 @@ export default function WinnerPredictionCalculator({
               onClick={handleNext}
               disabled={calculating || refLoading}
             >
-              {calculating ? '분석 중…' : isLastStep ? '당첨 확률 분석' : '다음'}
+              {calculating ? '계산 중…' : isLastStep ? '내 가점 비교하기' : '다음'}
             </button>
           </div>
         </>
       ) : (
         <div className="predict-result rise">
-          <RadialGauge
-            value={result.probability}
-            label="당첨 확률"
-            sublabel={result.headline}
-          />
+          {/* 당첨 확률은 산출하지 않는다. 내 가점과 공개 통계의 실제 차이만 보여준다. */}
+          <div className="predict-big-num tnum">
+            {result.breakdown.total}
+            <span className="predict-unit">점</span>
+          </div>
+          <p className="predict-desc">{result.headline}</p>
 
           <div className="predict-insight">
             <p className="predict-insight-main">{result.insight}</p>
             <p className="predict-insight-sub">{result.detail}</p>
           </div>
 
-          <div className="predict-compare-grid">
-            <CompareCell label="내 가점" value={result.breakdown.total} highlight />
-            <CompareCell label="평균 당첨" value={result.reference.avg} />
-            <CompareCell label="커트라인" value={result.reference.min} />
-            <CompareCell label="최고 가점" value={result.reference.max} />
-          </div>
+          {result.reference && (
+            <div className="predict-compare-grid">
+              <CompareCell label="내 가점" value={result.breakdown.total} highlight />
+              <CompareCell label="평균 당첨" value={result.reference.avg} />
+              <CompareCell label="최저 당첨" value={result.reference.min} />
+              <CompareCell label="최고 가점" value={result.reference.max} />
+            </div>
+          )}
 
           <div className="predict-breakdown">
             <div className="predict-breakdown-row">
@@ -532,8 +535,13 @@ export default function WinnerPredictionCalculator({
           </div>
 
           <p className="predict-disclaimer">
-            * 청약홈 공개 당첨자 가점 통계 기반 추정치이며, 실제 당첨 결과와 다를 수 있습니다.
-            {result.reference.sampleCount > 0 && ` (${result.reference.regionName} · 표본 ${result.reference.sampleCount}건)`}
+            * 당첨 확률이 아니라 <strong>과거 당첨가점과의 비교</strong>입니다. 공고·면적·순위별로 편차가 크며
+            실제 결과와 다를 수 있습니다. 가점 산식의 공식 정확성은 별도 검증 전입니다.
+            {result.reference
+              ? ` (출처: 청약홈 공개 당첨자 가점 통계 · ${result.reference.regionName}${
+                  result.reference.statMonth ? ` · ${result.reference.statMonth}` : ''
+                } · 표본 ${result.reference.sampleCount}건)`
+              : ' (비교할 공개 통계를 불러오지 못했습니다)'}
           </p>
 
           <div className="predict-actions">

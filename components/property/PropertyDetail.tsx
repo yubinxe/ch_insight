@@ -144,7 +144,7 @@ export default function PropertyDetail({ id }: { id: string }) {
                 <Icon name="spark" size={22} />
               </div>
               <div className="predict-banner-text">
-                <strong>AI 당첨 확률 계산</strong>
+                <strong>내 가점 비교</strong>
                 <span>이 단지의 최근 당첨 가점 통계와 내 조건을 비교해 볼 수 있습니다</span>
               </div>
               <span className="predict-banner-arrow" aria-hidden>→</span>
@@ -271,7 +271,7 @@ export default function PropertyDetail({ id }: { id: string }) {
 
             <div className="rise detail-cta" style={{ animationDelay: '160ms', marginTop: 'var(--gap)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button type="button" className="btn-ink" onClick={() => setPredictOpen(true)}>
-                AI 당첨 확률 계산 →
+                내 가점 비교 →
               </button>
               {ann.PBLANC_URL && (
                 <PrimaryButton href={ann.PBLANC_URL}>

@@ -5,9 +5,10 @@ import { KOREA_REGIONS, REGION_BY_CODE, heatLevel } from '@/lib/korea-regions'
 import type { HotmapPayload, HotmapRegion, HotmapSpot } from '@/lib/hotmap-types'
 import type { Announcement, CompetitionStatItem } from '@/lib/types'
 import { getSubscriptionStatus } from '@/lib/announcement-helpers'
+import { dataPortalKey } from '@/lib/config/data-portal-key'
 
 const BASE = 'https://api.odcloud.kr/api'
-const KEY = process.env.PUBLIC_DATA_API_KEY!
+const KEY = dataPortalKey()
 
 function parseRate(v: string) {
   const n = parseFloat(v)

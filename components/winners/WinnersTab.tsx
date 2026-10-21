@@ -94,6 +94,10 @@ const REGIONS = [
   { code: '700', name: '대구' }, { code: '712', name: '경북' },
 ]
 
+const Skeleton = ({ h = 240 }: { h?: number }) => (
+    <div style={{ height: h, borderRadius: 12, background: 'var(--track)' }} />
+  )
+
 export default function WinnersTab() {
   // ── 연령별 통계 ─────────────────────────────────────
   const [allAgeApplicants, setAllAgeApplicants] = useState<AgeStatItem[]>([])
@@ -101,10 +105,9 @@ export default function WinnersTab() {
   const [ageMonths, setAgeMonths]               = useState<string[]>([])
   const [ageMonth, setAgeMonth]                 = useState('')
   const [ageMode, setAgeMode]                   = useState<'applicants' | 'winners'>('winners')
-  const [ageLoading, setAgeLoading]             = useState(false)
+  const [ageLoading, setAgeLoading]             = useState(true)
 
   useEffect(() => {
-    setAgeLoading(true)
     fetchWinnersAge({ monthFrom: '', monthTo: '' })
       .then(r => {
         setAllAgeApplicants(r.applicants)
@@ -134,10 +137,9 @@ export default function WinnersTab() {
   const [allRegionWinners, setAllRegionWinners]       = useState<AreaStatItem[]>([])
   const [regionMonths, setRegionMonths]               = useState<string[]>([])
   const [regionMonth, setRegionMonth]                 = useState('')
-  const [regionLoading, setRegionLoading]             = useState(false)
+  const [regionLoading, setRegionLoading]             = useState(true)
 
   useEffect(() => {
-    setRegionLoading(true)
     fetchWinnersRegion({ month: '' })
       .then(r => {
         setAllRegionApplicants(r.applicants)
@@ -179,7 +181,6 @@ export default function WinnersTab() {
   const [scoreLoading, setScoreLoading] = useState(false)
 
   useEffect(() => {
-    setScoreLoading(true)
     fetchWinnersScore({ month: '', region: scoreRegion })
       .then(r => {
         const data = r.data ?? []
@@ -209,9 +210,7 @@ export default function WinnersTab() {
     ? (filteredScore.reduce((s, d) => s + parseFloat(d.MED_SCORE || '0'), 0) / filteredScore.length).toFixed(1)
     : '-'
 
-  const Skeleton = ({ h = 240 }: { h?: number }) => (
-    <div style={{ height: h, borderRadius: 12, background: 'var(--track)' }} />
-  )
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap)' }}>

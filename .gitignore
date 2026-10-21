@@ -15,6 +15,9 @@
 
 # next.js
 /.next/
+/.data/
+/artifacts/
+/lint-report.json
 /out/
 
 # production
@@ -43,3 +46,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase CLI 로컬 캐시
+supabase/.temp/
+
+# PPT 작업 파일 — 산출물이지 소스가 아니다
+PPT/
